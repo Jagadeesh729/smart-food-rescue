@@ -21,6 +21,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError('');
     setLoading(true);
     
@@ -28,11 +29,12 @@ const Login = () => {
       await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Login error detail:', err);
       const message = err.response?.data?.message || 'Login failed. Please try again.';
+      const userId = err.response?.data?.userId;
       
-      if (message.includes('verify your email first')) {
-        setOtpData({ ...otpData, userId: err.response.data.userId });
+      if (message.toLowerCase().includes('verify') && userId) {
+        setOtpData(prev => ({ ...prev, userId }));
         setShowOtp(true);
       } else {
         setError(message);
