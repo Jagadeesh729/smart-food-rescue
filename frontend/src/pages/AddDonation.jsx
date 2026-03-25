@@ -137,7 +137,8 @@ const AddDonation = () => {
               <label htmlFor="quantity" className="block text-gray-700 text-sm font-bold mb-2">Quantity</label>
               <div className="flex gap-2">
                 <input id="quantity" type="number" name="quantity" value={formData.quantity} onChange={handleChange} required className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="e.g., 50" />
-                <select id="unit" aria-label="Quantity Unit" name="unit" value={formData.unit} onChange={handleChange} className="w-1/3 px-4 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <label htmlFor="unit" className="sr-only">Quantity Unit</label>
+                <select id="unit" name="unit" value={formData.unit} onChange={handleChange} className="w-1/3 px-4 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <option value="kg">kg</option>
                   <option value="plates">plates</option>
                   <option value="boxes">boxes</option>
