@@ -69,25 +69,25 @@ const Register = () => {
             {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center mb-6 font-medium">{error}</div>}
 
             <form className="space-y-4" onSubmit={handleRegisterSubmit}>
-              <Input label="Full Name / Organization" name="name" value={formData.name} onChange={handleChange} required />
-              <Input label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} required />
-              <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} />
+              <Input label="Full Name / Organization" name="name" value={formData.name} onChange={handleChange} required autoComplete="name" />
+              <Input label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} required autoComplete="email" />
+              <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} autoComplete="tel" />
               
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-bold mb-2">Account Type</label>
                 <div className="flex space-x-4">
-                  <label className="flex items-center">
-                    <input type="radio" name="role" value="Donor" checked={formData.role === 'Donor'} onChange={handleChange} className="mr-2 accent-emerald-600" />
+                  <label htmlFor="role-donor" className="flex items-center cursor-pointer">
+                    <input type="radio" id="role-donor" name="role" value="Donor" checked={formData.role === 'Donor'} onChange={handleChange} className="mr-2 accent-emerald-600" />
                     Donor
                   </label>
-                  <label className="flex items-center">
-                    <input type="radio" name="role" value="NGO" checked={formData.role === 'NGO'} onChange={handleChange} className="mr-2 accent-emerald-600" />
+                  <label htmlFor="role-ngo" className="flex items-center cursor-pointer">
+                    <input type="radio" id="role-ngo" name="role" value="NGO" checked={formData.role === 'NGO'} onChange={handleChange} className="mr-2 accent-emerald-600" />
                     NGO / Receiver
                   </label>
                 </div>
               </div>
 
-              <Input label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required />
+              <Input label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required autoComplete="new-password" />
 
               <Button type="submit" disabled={loading} className="py-3 mt-6">
                 {loading ? 'Registering...' : 'Sign Up'}

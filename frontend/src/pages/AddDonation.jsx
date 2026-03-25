@@ -102,11 +102,12 @@ const AddDonation = () => {
         {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Input label="Listing Title" name="title" value={formData.title} onChange={handleChange} required placeholder="e.g., 50 boxes of Biryani from Wedding" />
+          <Input label="Listing Title" name="title" value={formData.title} onChange={handleChange} required placeholder="e.g., 50 boxes of Biryani from Wedding" autoComplete="off" />
           
           <div>
-            <label className="block text-gray-700 text-sm font-bold mb-2">Description</label>
+            <label htmlFor="description" className="block text-gray-700 text-sm font-bold mb-2">Description</label>
             <textarea 
+              id="description"
               name="description" 
               value={formData.description} 
               onChange={handleChange} 
@@ -119,8 +120,8 @@ const AddDonation = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2">Food Type</label>
-              <select name="foodType" value={formData.foodType} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <label htmlFor="foodType" className="block text-gray-700 text-sm font-bold mb-2">Food Type</label>
+              <select id="foodType" name="foodType" value={formData.foodType} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 <option value="Cooked">Cooked Food</option>
                 <option value="Raw">Raw Ingredients / Vegetables</option>
                 <option value="Packaged">Packaged Goods</option>
@@ -128,15 +129,15 @@ const AddDonation = () => {
             </div>
             
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2">Expiry Time</label>
-              <input type="datetime-local" name="expiryTime" value={formData.expiryTime} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              <label htmlFor="expiryTime" className="block text-gray-700 text-sm font-bold mb-2">Expiry Time</label>
+              <input id="expiryTime" type="datetime-local" name="expiryTime" value={formData.expiryTime} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             </div>
 
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2">Quantity</label>
+              <label htmlFor="quantity" className="block text-gray-700 text-sm font-bold mb-2">Quantity</label>
               <div className="flex gap-2">
-                <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} required className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="e.g., 50" />
-                <select name="unit" value={formData.unit} onChange={handleChange} className="w-1/3 px-4 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <input id="quantity" type="number" name="quantity" value={formData.quantity} onChange={handleChange} required className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="e.g., 50" />
+                <select id="unit" aria-label="Quantity Unit" name="unit" value={formData.unit} onChange={handleChange} className="w-1/3 px-4 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <option value="kg">kg</option>
                   <option value="plates">plates</option>
                   <option value="boxes">boxes</option>
@@ -146,26 +147,28 @@ const AddDonation = () => {
             </div>
 
             <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2">Upload Photo</label>
+              <label htmlFor="photo-upload" className="block text-gray-700 text-sm font-bold mb-2">Upload Photo</label>
               <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col flex-1 items-center px-4 py-2 bg-white rounded-lg border border-gray-300 border-dashed cursor-pointer hover:bg-gray-50">
+                <label htmlFor="photo-upload" className="flex flex-col flex-1 items-center px-4 py-2 bg-white rounded-lg border border-gray-300 border-dashed cursor-pointer hover:bg-gray-50">
                   <UploadCloud className="w-6 h-6 text-gray-400" />
                   <span className="mt-1 text-xs text-gray-500">{image ? image.name : 'Select a file'}</span>
-                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                  <input id="photo-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                 </label>
               </div>
             </div>
           </div>
 
           <div className="pt-4 border-t border-gray-100">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Pickup Location</label>
+            <label htmlFor="addressSearch" className="block text-gray-700 text-sm font-bold mb-2">Pickup Location</label>
             
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <input 
+                id="addressSearch"
                 type="text" 
                 value={addressInput} 
                 onChange={(e) => setAddressInput(e.target.value)} 
                 placeholder="Type address manually (e.g., 123 Main St, New York)" 
+                autoComplete="street-address"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <Button type="button" onClick={handleAddressSearch} disabled={searchingLocation} className="shrink-0 py-2">
