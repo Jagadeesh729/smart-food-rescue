@@ -14,7 +14,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { register, verifyOTP } = useContext(AuthContext);
+  const { register, verifyOTP, resendOTP } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -119,6 +119,24 @@ const Register = () => {
               <Button type="submit" disabled={loading} className="py-3">
                 {loading ? 'Verifying...' : 'Verify & Login'}
               </Button>
+
+              <div className="text-center mt-4">
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                    setError('');
+                    try {
+                      await resendOTP(otpData.userId);
+                      alert('New OTP sent to your email!');
+                    } catch (err) {
+                      setError(err.response?.data?.message || 'Failed to resend OTP.');
+                    }
+                  }}
+                  className="text-emerald-600 font-bold hover:underline"
+                >
+                  Resend code
+                </button>
+              </div>
             </form>
           </>
         )}

@@ -153,9 +153,53 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// @desc    Resend OTP
+// @route   POST /api/auth/resend-otp
+// @access  Public
+const resendOTP = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.isVerified) return res.status(400).json({ message: 'User already verified' });
+
+    // Generate new OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.otp = { code: otpCode, expiresAt: otpExpiresAt };
+    await user.save();
+
+    // Send Email
+    try {
+      const { sendEmail } = require('../services/emailService');
+      await sendEmail(
+        user.email,
+        'Your New Verification Code - Smart Food Rescue',
+        `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
+          <h2 style="color:#059669;margin-bottom:8px;">Smart Food Rescue</h2>
+          <p style="color:#374151;">Here is your new verification code.</p>
+          <div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
+            <p style="color:#6b7280;font-size:14px;margin:0 0 8px;">Your New One-Time Password</p>
+            <h1 style="font-size:42px;letter-spacing:12px;color:#065f46;margin:0;">${otpCode}</h1>
+          </div>
+          <p style="color:#6b7280;font-size:13px;">This OTP expires in <strong>10 minutes</strong>.</p>
+        </div>`
+      );
+    } catch (emailErr) {
+      console.error('Failed to resend OTP email:', emailErr.message);
+    }
+
+    res.json({ message: 'New OTP sent to your email' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   verifyOTP,
+  resendOTP,
   loginUser,
   getUserProfile
 };

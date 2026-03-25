@@ -39,13 +39,18 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const resendOTP = async (userId) => {
+    const { data } = await api.post('/auth/resend-otp', { userId });
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, verifyOTP, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, verifyOTP, resendOTP, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
