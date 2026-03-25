@@ -102,7 +102,6 @@ const Register = () => {
               </div>
               <h2 className="text-3xl font-extrabold text-gray-900">Verify Email</h2>
               <p className="mt-2 text-sm text-gray-600">Enter the 6-digit OTP sent to your email.</p>
-              <p className="text-xs text-emerald-600 font-medium mt-1">(Check terminal logs for OTP in this demo)</p>
             </div>
             
             {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center mb-6 font-medium">{error}</div>}

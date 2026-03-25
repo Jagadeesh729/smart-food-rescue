@@ -35,8 +35,27 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
-      // In a real app, send email with OTP here using nodemailer
-      console.log(`OTP for ${email} is ${otpCode}`);
+      // Send OTP via email
+      try {
+        const { sendEmail } = require('../services/emailService');
+        await sendEmail(
+          email,
+          'Verify Your Smart Food Rescue Account',
+          `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
+            <h2 style="color:#059669;margin-bottom:8px;">Smart Food Rescue</h2>
+            <p style="color:#374151;">Welcome, <strong>${name}</strong>! Please verify your email to start rescuing food.</p>
+            <div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
+              <p style="color:#6b7280;font-size:14px;margin:0 0 8px;">Your One-Time Password</p>
+              <h1 style="font-size:42px;letter-spacing:12px;color:#065f46;margin:0;">${otpCode}</h1>
+            </div>
+            <p style="color:#6b7280;font-size:13px;">This OTP expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+          </div>`
+        );
+      } catch (emailErr) {
+        console.error('Failed to send OTP email:', emailErr.message);
+        // Don't block registration if email fails
+      }
+      console.log(`OTP for ${email} is ${otpCode}`); // keep as fallback log
       res.status(201).json({
         message: 'User registered successfully. Please verify your email.',
         userId: user._id
