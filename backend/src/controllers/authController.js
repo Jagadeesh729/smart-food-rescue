@@ -2,6 +2,9 @@ const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const bcrypt = require('bcrypt');
 const { sendEmail } = require('../services/emailService');
+const { OAuth2Client } = require('google-auth-library');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
@@ -224,11 +227,59 @@ const resendOTP = async (req, res) => {
   }
 };
 
+// @desc    Google login/register
+// @route   POST /api/auth/google
+// @access  Public
+const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const { name, email, sub: googleId, picture } = ticket.getPayload();
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create new user for first time Google login
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        isVerified: true, // Google email is already verified
+        role: 'Donor', // Default role
+      });
+    } else {
+      // Update googleId if not already set
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      picture: picture,
+      token: generateToken(user._id),
+    });
+
+  } catch (error) {
+    console.error('Google Auth Error:', error.message);
+    res.status(400).json({ message: 'Google authentication failed' });
+  }
+};
+
 module.exports = {
   registerUser,
   verifyOTP,
   resendOTP,
   loginUser,
   getUserProfile,
-  checkEmail
+  checkEmail,
+  googleLogin
 };

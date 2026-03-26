@@ -5,6 +5,7 @@ import Input from '../components/Input';
 import Button from '../components/Button';
 import { UserPlus, ShieldCheck, MailCheck, MailX, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Register = () => {
   const [formData, setFormData] = useState({ 
@@ -20,7 +21,7 @@ const Register = () => {
   const [emailStatus, setEmailStatus] = useState('idle'); // idle, checking, taken, available
   const checkTimeoutRef = useRef(null);
 
-  const { register, verifyOTP, resendOTP, checkEmail } = useContext(AuthContext);
+  const { register, verifyOTP, resendOTP, checkEmail, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   // Cooldown effect
@@ -53,6 +54,19 @@ const Register = () => {
           setEmailStatus('idle');
         }
       }, 250);
+    }
+  };
+
+  const handleGoogleSuccess = async (response) => {
+    const loginToast = toast.loading('Signing up with Google...');
+    try {
+      await googleLogin(response.credential);
+      toast.success('Account created and verified!');
+      navigate('/dashboard');
+    } catch (err) {
+      toast.error('Google registration failed.');
+    } finally {
+      toast.dismiss(loginToast);
     }
   };
 
@@ -170,6 +184,26 @@ const Register = () => {
                 {loading ? 'Registering...' : 'Sign Up'}
               </Button>
             </form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500 font-medium">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error('Google Sign-In failed')}
+                useOneTap
+                theme="outline"
+                shape="pill"
+                width="100%"
+              />
+            </div>
           </>
         ) : (
           <>

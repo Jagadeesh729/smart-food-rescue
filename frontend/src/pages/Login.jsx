@@ -5,6 +5,7 @@ import Input from '../components/Input';
 import Button from '../components/Button';
 import { LogIn, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -14,7 +15,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   
-  const { login, verifyOTP, resendOTP } = useContext(AuthContext);
+  const { login, verifyOTP, resendOTP, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   // Cooldown effect
@@ -59,6 +60,19 @@ const Login = () => {
     } finally {
       setLoading(false);
       if (loadingToast) toast.dismiss(loadingToast);
+    }
+  };
+
+  const handleGoogleSuccess = async (response) => {
+    const loginToast = toast.loading('Signing in with Google...');
+    try {
+      await googleLogin(response.credential);
+      toast.success('Welcome back!');
+      navigate('/dashboard');
+    } catch (err) {
+      toast.error('Google login failed.');
+    } finally {
+      toast.dismiss(loginToast);
     }
   };
 
@@ -151,6 +165,26 @@ const Login = () => {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500 font-medium">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error('Google Sign-In failed')}
+                useOneTap
+                theme="outline"
+                shape="pill"
+                width="100%"
+              />
+            </div>
           </>
         ) : (
           <>
