@@ -24,7 +24,8 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response && error.response.status === 401) {
+    // Only redirect if it's not the login endpoint to avoid page-reset glitches
+    if (error.response && error.response.status === 401 && !error.config.url.includes('/auth/login')) {
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
