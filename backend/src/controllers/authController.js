@@ -235,5 +235,6 @@ module.exports = {
   verifyOTP,
   resendOTP,
   loginUser,
-  getUserProfile
+  getUserProfile,
+  checkEmail
 };
