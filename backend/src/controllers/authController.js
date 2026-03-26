@@ -195,12 +195,16 @@ const resendOTP = async (req, res) => {
     
     await user.save();
 
-    // Send Email (Background task)
-    setImmediate(() => {
-      sendVerificationEmail(user.email, user.name, otpCode, true).catch(err => {
-        console.error(`❌ Resend Email Fail for ${user.email}:`, err.message);
-      });
-    });
+    // Send Email (Wait for result during debugging to catch EAUTH)
+    try {
+      const emailSent = await sendVerificationEmail(user.email, user.name, otpCode, true);
+      if (!emailSent) {
+        return res.status(500).json({ message: 'Mail server error. Please check backend logs for EAUTH/SMTP issues.' });
+      }
+    } catch (err) {
+      console.error(`❌ Resend Email Error for ${user.email}:`, err.message);
+      return res.status(500).json({ message: `Mail error: ${err.message}` });
+    }
 
     res.json({ message: 'New OTP sent to your email' });
   } catch (error) {

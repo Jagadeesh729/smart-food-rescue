@@ -201,6 +201,7 @@ const Register = () => {
                 theme="outline"
                 shape="pill"
                 width={400}
+                use_fedcm_for_prompt={true}
               />
             </div>
           </>
