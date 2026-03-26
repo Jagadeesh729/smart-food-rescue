@@ -51,7 +51,7 @@ const Login = () => {
       if (message.toLowerCase().includes('verify') && userId) {
         setOtpData(prev => ({ ...prev, userId }));
         setShowOtp(true);
-        toast.info('Please verify your email to continue.');
+        toast( 'Please verify your email to continue.', { icon: 'ℹ️' });
       } else {
         setError(message);
         toast.error(message);
