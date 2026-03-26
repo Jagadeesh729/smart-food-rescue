@@ -1,9 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import { LogIn, ShieldCheck } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -11,22 +12,36 @@ const Login = () => {
   const [showOtp, setShowOtp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   
   const { login, verifyOTP, resendOTP } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  // Cooldown effect
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => setCooldown(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (loading) return;
+    
     setError('');
     setLoading(true);
     
+    const loadingToast = !showOtp ? toast.loading('Signing in...') : null;
+    
     try {
       await login(formData.email, formData.password);
+      toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (err) {
       console.error('Login error detail:', err);
@@ -36,26 +51,53 @@ const Login = () => {
       if (message.toLowerCase().includes('verify') && userId) {
         setOtpData(prev => ({ ...prev, userId }));
         setShowOtp(true);
+        toast.info('Please verify your email to continue.');
       } else {
         setError(message);
+        toast.error(message);
       }
     } finally {
       setLoading(false);
+      if (loadingToast) toast.dismiss(loadingToast);
     }
   };
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+    
     setError('');
     setLoading(true);
+    const verifyToast = toast.loading('Verifying code...');
     
     try {
       await verifyOTP(otpData.userId, otpData.code);
+      toast.success('Email verified successfully!');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'OTP Verification failed.');
+      const msg = err.response?.data?.message || 'Verification failed.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
+      toast.dismiss(verifyToast);
+    }
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0) return;
+    
+    const resendToast = toast.loading('Sending code...');
+    try {
+      await resendOTP(otpData.userId);
+      toast.success('New OTP sent to your email!');
+      setCooldown(60); // 60s cooldown
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to resend OTP.';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      toast.dismiss(resendToast);
     }
   };
 
@@ -81,7 +123,7 @@ const Login = () => {
               </div>
             )}
 
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            <form className="space-y-6" onSubmit={handleSubmit} autoComplete="on">
               <div className="space-y-4">
                 <Input 
                   label="Email Address" 
@@ -122,7 +164,7 @@ const Login = () => {
             
             {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center mb-6 font-medium">{error}</div>}
 
-            <form className="space-y-6" onSubmit={handleOtpSubmit}>
+            <form className="space-y-6" onSubmit={handleOtpSubmit} autoComplete="off">
               <Input 
                 label="OTP Code" 
                 name="code" 
@@ -131,6 +173,7 @@ const Login = () => {
                 required 
                 placeholder="123456"
                 className="text-center tracking-widest text-xl"
+                autoFocus
               />
               <Button type="submit" disabled={loading} className="py-3">
                 {loading ? 'Verifying...' : 'Verify & Login'}
@@ -139,18 +182,11 @@ const Login = () => {
               <div className="text-center mt-4">
                 <button 
                   type="button" 
-                  onClick={async () => {
-                    setError('');
-                    try {
-                      await resendOTP(otpData.userId);
-                      alert('New OTP sent to your email!');
-                    } catch (err) {
-                      setError(err.response?.data?.message || 'Failed to resend OTP.');
-                    }
-                  }}
-                  className="text-emerald-600 font-bold hover:underline"
+                  onClick={handleResend}
+                  disabled={cooldown > 0}
+                  className={`font-bold ${cooldown > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-emerald-600 hover:underline'}`}
                 >
-                  Resend code
+                  {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
                 </button>
               </div>
             </form>

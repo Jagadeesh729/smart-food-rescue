@@ -1,9 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import { UserPlus, ShieldCheck } from 'lucide-react';
+import { UserPlus, ShieldCheck, MailCheck, MailX, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const Register = () => {
   const [formData, setFormData] = useState({ 
@@ -13,27 +14,71 @@ const Register = () => {
   const [showOtp, setShowOtp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   
-  const { register, verifyOTP, resendOTP } = useContext(AuthContext);
+  // Email check states
+  const [emailStatus, setEmailStatus] = useState('idle'); // idle, checking, taken, available
+  const checkTimeoutRef = useRef(null);
+
+  const { register, verifyOTP, resendOTP, checkEmail } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // Cooldown effect
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => setCooldown(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    if (name === 'email') {
+      if (checkTimeoutRef.current) clearTimeout(checkTimeoutRef.current);
+      
+      if (!value || !value.includes('@')) {
+        setEmailStatus('idle');
+        return;
+      }
+
+      setEmailStatus('checking');
+      checkTimeoutRef.current = setTimeout(async () => {
+        try {
+          const res = await checkEmail(value);
+          setEmailStatus(res.exists ? 'taken' : 'available');
+        } catch (err) {
+          setEmailStatus('idle');
+        }
+      }, 500);
+    }
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    if (emailStatus === 'taken') {
+      toast.error('This email is already registered.');
+      return;
+    }
+    
     setError('');
     setLoading(true);
+    const regToast = toast.loading('Creating account...');
     
     try {
       const res = await register(formData);
       setOtpData({ ...otpData, userId: res.userId });
       setShowOtp(true);
+      toast.success('Account created! Please verify your email.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const msg = err.response?.data?.message || 'Registration failed.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
+      toast.dismiss(regToast);
     }
   };
 
@@ -41,14 +86,36 @@ const Register = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    const verifyToast = toast.loading('Verifying code...');
     
     try {
       await verifyOTP(otpData.userId, otpData.code);
+      toast.success('Great! Your email is verified.');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'OTP Verification failed.');
+      const msg = err.response?.data?.message || 'Verification failed.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
+      toast.dismiss(verifyToast);
+    }
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0) return;
+    
+    const resendToast = toast.loading('Sending code...');
+    try {
+      await resendOTP(otpData.userId);
+      toast.success('New OTP sent to your email!');
+      setCooldown(60);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to resend OTP.';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      toast.dismiss(resendToast);
     }
   };
 
@@ -70,7 +137,17 @@ const Register = () => {
 
             <form className="space-y-4" onSubmit={handleRegisterSubmit}>
               <Input label="Full Name / Organization" name="name" value={formData.name} onChange={handleChange} required autoComplete="name" />
-              <Input label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} required autoComplete="email" />
+              
+              <div className="relative">
+                <Input label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} required autoComplete="email" />
+                <div className="absolute right-0 top-9 pr-3 flex items-center pt-0.5">
+                  {emailStatus === 'checking' && <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />}
+                  {emailStatus === 'available' && <MailCheck className="w-5 h-5 text-emerald-500" />}
+                  {emailStatus === 'taken' && <MailX className="w-5 h-5 text-red-500" />}
+                </div>
+                {emailStatus === 'taken' && <p className="text-[11px] text-red-500 mt-1 font-medium italic">Email already in use. Maybe login?</p>}
+              </div>
+
               <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} autoComplete="tel" />
               
               <div className="mb-4">
@@ -89,7 +166,7 @@ const Register = () => {
 
               <Input label="Password" name="password" type="password" value={formData.password} onChange={handleChange} required autoComplete="new-password" />
 
-              <Button type="submit" disabled={loading} className="py-3 mt-6">
+              <Button type="submit" disabled={loading || emailStatus === 'checking'} className="py-3 mt-6">
                 {loading ? 'Registering...' : 'Sign Up'}
               </Button>
             </form>
@@ -115,6 +192,7 @@ const Register = () => {
                 required 
                 placeholder="123456"
                 className="text-center tracking-widest text-xl"
+                autoFocus
               />
               <Button type="submit" disabled={loading} className="py-3">
                 {loading ? 'Verifying...' : 'Verify & Login'}
@@ -123,18 +201,11 @@ const Register = () => {
               <div className="text-center mt-4">
                 <button 
                   type="button" 
-                  onClick={async () => {
-                    setError('');
-                    try {
-                      await resendOTP(otpData.userId);
-                      alert('New OTP sent to your email!');
-                    } catch (err) {
-                      setError(err.response?.data?.message || 'Failed to resend OTP.');
-                    }
-                  }}
-                  className="text-emerald-600 font-bold hover:underline"
+                  onClick={handleResend}
+                  disabled={cooldown > 0}
+                  className={`font-bold ${cooldown > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-emerald-600 hover:underline'}`}
                 >
-                  Resend code
+                  {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
                 </button>
               </div>
             </form>

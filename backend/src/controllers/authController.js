@@ -153,21 +153,55 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// @desc    Check if email exists
+// @route   GET /api/auth/check-email
+// @access  Public
+const checkEmail = async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ message: 'Email required' });
+    
+    const user = await User.findOne({ email });
+    res.json({ exists: !!user, isVerified: user ? user.isVerified : false });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Resend OTP
 // @route   POST /api/auth/resend-otp
 // @access  Public
 const resendOTP = async (req, res) => {
   try {
     const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: 'User ID is required' });
+
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.isVerified) return res.status(400).json({ message: 'User already verified' });
 
-    // Generate new OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    // --- Basic Rate Limiting ---
+    const currentTime = new Date();
+    const fifteenMinsAgo = new Date(currentTime.getTime() - 15 * 60 * 1000);
+    
+    // Reset count if last resend was > 15 mins ago
+    if (user.otp.lastResendAt && user.otp.lastResendAt < fifteenMinsAgo) {
+      user.otp.resendCount = 0;
+    }
 
-    user.otp = { code: otpCode, expiresAt: otpExpiresAt };
+    if (user.otp.resendCount >= 3) {
+      return res.status(429).json({ message: 'Too many resend attempts. Please try again in 15 minutes.' });
+    }
+
+    // --- Generate new OTP ---
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(currentTime.getTime() + 10 * 60 * 1000);
+
+    user.otp.code = otpCode;
+    user.otp.expiresAt = otpExpiresAt;
+    user.otp.resendCount += 1;
+    user.otp.lastResendAt = currentTime;
+    
     await user.save();
 
     // Send Email

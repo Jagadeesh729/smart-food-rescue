@@ -44,13 +44,18 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const checkEmail = async (email) => {
+    const { data } = await api.get(`/auth/check-email?email=${email}`);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, verifyOTP, resendOTP, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, verifyOTP, resendOTP, checkEmail, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

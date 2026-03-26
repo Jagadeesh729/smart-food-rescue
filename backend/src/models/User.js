@@ -38,7 +38,9 @@ const userSchema = new mongoose.Schema({
   },
   otp: {
     code: String,
-    expiresAt: Date
+    expiresAt: Date,
+    resendCount: { type: Number, default: 0 },
+    lastResendAt: { type: Date }
   }
 }, { timestamps: true });
 
