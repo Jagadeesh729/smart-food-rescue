@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const bcrypt = require('bcrypt');
-const { sendEmail } = require('../services/emailService');
+const { sendEmail, sendVerificationEmail } = require('../services/emailService');
 const { OAuth2Client } = require('google-auth-library');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -41,21 +41,12 @@ const registerUser = async (req, res) => {
     if (user) {
       // Send OTP via email (Non-blocking background task)
       setImmediate(() => {
-        sendEmail(
-          email,
-          'Verify Your Smart Food Rescue Account',
-          `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
-            <h2 style="color:#059669;margin-bottom:8px;">Smart Food Rescue</h2>
-            <p style="color:#374151;">Welcome, <strong>${name}</strong>! Please verify your email to start rescuing food.</p>
-            <div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
-              <p style="color:#6b7280;font-size:14px;margin:0 0 8px;">Your One-Time Password</p>
-              <h1 style="font-size:42px;letter-spacing:12px;color:#065f46;margin:0;">${otpCode}</h1>
-            </div>
-            <p style="color:#6b7280;font-size:13px;">This OTP expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
-          </div>`
-        ).catch(err => console.error('Background Email Error:', err.message));
+        sendVerificationEmail(email, name, otpCode).catch(err => {
+          console.error(`❌ Registration Email Fail for ${email}:`, err.message);
+        });
       });
-      console.log(`OTP for ${email} is ${otpCode}`); // keep as fallback log
+      
+      console.log(`[AUTH] New User: ${email} | OTP: ${otpCode}`);
       res.status(201).json({
         message: 'User registered successfully. Please verify your email.',
         userId: user._id
@@ -206,19 +197,9 @@ const resendOTP = async (req, res) => {
 
     // Send Email (Background task)
     setImmediate(() => {
-      sendEmail(
-        user.email,
-        'Your New Verification Code - Smart Food Rescue',
-        `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
-          <h2 style="color:#059669;margin-bottom:8px;">Smart Food Rescue</h2>
-          <p style="color:#374151;">Here is your new verification code.</p>
-          <div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
-            <p style="color:#6b7280;font-size:14px;margin:0 0 8px;">Your New One-Time Password</p>
-            <h1 style="font-size:42px;letter-spacing:12px;color:#065f46;margin:0;">${otpCode}</h1>
-          </div>
-          <p style="color:#6b7280;font-size:13px;">This OTP expires in <strong>10 minutes</strong>.</p>
-        </div>`
-      ).catch(err => console.error('Background Email Error:', err.message));
+      sendVerificationEmail(user.email, user.name, otpCode, true).catch(err => {
+        console.error(`❌ Resend Email Fail for ${user.email}:`, err.message);
+      });
     });
 
     res.json({ message: 'New OTP sent to your email' });
@@ -248,15 +229,23 @@ const googleLogin = async (req, res) => {
         name,
         email,
         googleId,
+        picture, // Save Google profile picture
         isVerified: true, // Google email is already verified
         role: 'Donor', // Default role
       });
     } else {
-      // Update googleId if not already set
+      // Update googleId and picture if not already set or changed
+      let hasUpdate = false;
       if (!user.googleId) {
         user.googleId = googleId;
-        await user.save();
+        hasUpdate = true;
       }
+      if (picture && user.picture !== picture) {
+        user.picture = picture;
+        hasUpdate = true;
+      }
+      
+      if (hasUpdate) await user.save();
     }
 
     res.json({

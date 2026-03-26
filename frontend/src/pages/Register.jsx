@@ -217,15 +217,18 @@ const Register = () => {
             
             {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center mb-6 font-medium">{error}</div>}
 
-            <form className="space-y-6" onSubmit={handleOtpSubmit}>
+            <form className="space-y-6" onSubmit={handleOtpSubmit} autoComplete="off">
               <Input 
                 label="OTP Code" 
                 name="code" 
                 value={otpData.code} 
-                onChange={(e) => setOtpData({ ...otpData, code: e.target.value })} 
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                  setOtpData({ ...otpData, code: val });
+                }} 
                 required 
                 placeholder="123456"
-                className="text-center tracking-widest text-xl"
+                className="text-center tracking-[0.5em] text-2xl font-mono"
                 autoFocus
               />
               <Button type="submit" disabled={loading} className="py-3">
