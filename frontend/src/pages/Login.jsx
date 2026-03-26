@@ -183,6 +183,7 @@ const Login = () => {
                 theme="outline"
                 shape="pill"
                 width={400}
+                ux_mode="redirect"
               />
             </div>
           </>
