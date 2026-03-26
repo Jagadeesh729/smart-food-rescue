@@ -38,7 +38,8 @@ const registerUser = async (req, res) => {
       // Send OTP via email
       try {
         const { sendEmail } = require('../services/emailService');
-        await sendEmail(
+        // Non-blocking: don't wait for email to send before responding to user
+        sendEmail(
           email,
           'Verify Your Smart Food Rescue Account',
           `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
@@ -50,7 +51,7 @@ const registerUser = async (req, res) => {
             </div>
             <p style="color:#6b7280;font-size:13px;">This OTP expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
           </div>`
-        );
+        ).catch(err => console.error('Background Email Error:', err.message));
       } catch (emailErr) {
         console.error('Failed to send OTP email:', emailErr.message);
         // Don't block registration if email fails
@@ -207,7 +208,8 @@ const resendOTP = async (req, res) => {
     // Send Email
     try {
       const { sendEmail } = require('../services/emailService');
-      await sendEmail(
+      // Non-blocking
+      sendEmail(
         user.email,
         'Your New Verification Code - Smart Food Rescue',
         `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
@@ -219,7 +221,7 @@ const resendOTP = async (req, res) => {
           </div>
           <p style="color:#6b7280;font-size:13px;">This OTP expires in <strong>10 minutes</strong>.</p>
         </div>`
-      );
+      ).catch(err => console.error('Background Email Error:', err.message));
     } catch (emailErr) {
       console.error('Failed to resend OTP email:', emailErr.message);
     }
