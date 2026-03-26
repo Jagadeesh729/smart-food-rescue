@@ -201,7 +201,7 @@ const Register = () => {
                 useOneTap
                 theme="outline"
                 shape="pill"
-                width="100%"
+                width={400}
               />
             </div>
           </>
