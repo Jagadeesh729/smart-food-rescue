@@ -267,6 +267,52 @@ const googleLogin = async (req, res) => {
   }
 };
 
+// @desc    Test SMTP connection
+// @route   GET /api/auth/test-smtp
+// @access  Public
+const testSMTP = async (req, res) => {
+  try {
+    const { sendEmail } = require('../services/emailService');
+    const nodemailer = require('nodemailer');
+    
+    const testTransporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    await testTransporter.verify();
+    
+    // Attempt to send a real test email to the user
+    const info = await testTransporter.sendMail({
+      from: `"Smart Food Rescue Support" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      subject: '🛠️ SMTP Diagnostic Test - Smart Food Rescue',
+      text: 'If you are reading this, your SMTP configuration is 100% CORRECT!'
+    });
+
+    res.json({ 
+      success: true, 
+      message: '✅ SMTP Connection Verified! A test email has been sent to your account.',
+      details: info.response,
+      user: process.env.EMAIL_USER ? 'Set' : 'Missing',
+      pass: process.env.EMAIL_PASS ? 'Set' : 'Missing'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: '❌ SMTP Configuration Error',
+      error: error.message,
+      code: error.code,
+      hint: error.code === 'EAUTH' ? 'Invalid Gmail Credentials. Check your App Password.' : 'Connection failed. Check Render Environment Variables.'
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   verifyOTP,
@@ -274,5 +320,6 @@ module.exports = {
   loginUser,
   getUserProfile,
   checkEmail,
-  googleLogin
+  googleLogin,
+  testSMTP
 };
