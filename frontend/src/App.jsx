@@ -12,6 +12,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AddDonation from './pages/AddDonation';
 import BrowseDonations from './pages/BrowseDonations';
+import Profile from './pages/Profile';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -40,6 +41,12 @@ const AppContent = () => {
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           } />
 
