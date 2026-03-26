@@ -30,16 +30,26 @@ startExpiryJob();
 
 // Middleware
 const path = require('path');
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
-if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'http://localhost:5174',
+  'https://smart-food-rescue-jet.vercel.app'
+];
+
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow non-browser requests (Postman, curl, server-to-server) and whitelisted origins
-    if (!origin || allowedOrigins.includes(origin)) {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS blocked: ${origin} is not allowed`));
+      console.warn(`CORS Warning: Origin ${origin} is not in whitelist.`);
+      callback(null, false); // Don't throw error, just block CORS
     }
   },
   credentials: true

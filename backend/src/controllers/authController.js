@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const bcrypt = require('bcrypt');
+const { sendEmail } = require('../services/emailService');
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
@@ -35,10 +36,8 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
-      // Send OTP via email
-      try {
-        const { sendEmail } = require('../services/emailService');
-        // Non-blocking: don't wait for email to send before responding to user
+      // Send OTP via email (Non-blocking background task)
+      setImmediate(() => {
         sendEmail(
           email,
           'Verify Your Smart Food Rescue Account',
@@ -52,10 +51,7 @@ const registerUser = async (req, res) => {
             <p style="color:#6b7280;font-size:13px;">This OTP expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
           </div>`
         ).catch(err => console.error('Background Email Error:', err.message));
-      } catch (emailErr) {
-        console.error('Failed to send OTP email:', emailErr.message);
-        // Don't block registration if email fails
-      }
+      });
       console.log(`OTP for ${email} is ${otpCode}`); // keep as fallback log
       res.status(201).json({
         message: 'User registered successfully. Please verify your email.',
@@ -205,10 +201,8 @@ const resendOTP = async (req, res) => {
     
     await user.save();
 
-    // Send Email
-    try {
-      const { sendEmail } = require('../services/emailService');
-      // Non-blocking
+    // Send Email (Background task)
+    setImmediate(() => {
       sendEmail(
         user.email,
         'Your New Verification Code - Smart Food Rescue',
@@ -222,9 +216,7 @@ const resendOTP = async (req, res) => {
           <p style="color:#6b7280;font-size:13px;">This OTP expires in <strong>10 minutes</strong>.</p>
         </div>`
       ).catch(err => console.error('Background Email Error:', err.message));
-    } catch (emailErr) {
-      console.error('Failed to resend OTP email:', emailErr.message);
-    }
+    });
 
     res.json({ message: 'New OTP sent to your email' });
   } catch (error) {

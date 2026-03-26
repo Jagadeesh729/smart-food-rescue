@@ -52,7 +52,7 @@ const Register = () => {
         } catch (err) {
           setEmailStatus('idle');
         }
-      }, 500);
+      }, 250);
     }
   };
 
