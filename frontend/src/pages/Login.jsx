@@ -182,7 +182,6 @@ const Login = () => {
                 theme="filled_blue"
                 shape="pill"
                 width={360}
-                ux_mode="redirect"
                 use_fedcm_for_prompt={true}
               />
             </div>
