@@ -80,7 +80,7 @@ const Dashboard = () => {
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 min-h-[400px]">
         <h2 className="text-xl font-bold text-gray-800 mb-6">Activity Overview</h2>
-        <div className="h-84 w-full" style={{ minHeight: '320px', position: 'relative' }}>
+        <div className="h-[340px] w-full" style={{ position: 'relative' }}>
           {mounted && chartData.length > 0 && (
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
