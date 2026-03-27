@@ -39,12 +39,21 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
-      // Send OTP via email (Non-blocking background task)
-      setImmediate(() => {
-        sendVerificationEmail(email, name, otpCode).catch(err => {
-          console.error(`❌ Registration Email Fail for ${email}:`, err.message);
-        });
-      });
+      // Send OTP via email (Awaited for immediate feedback & reliability)
+      try {
+        const sent = await sendVerificationEmail(email, name, otpCode);
+        if (!sent) {
+          // If email fails, delete the user so they can try again once they fix their SMTP config
+          await User.findByIdAndDelete(user._id);
+          return res.status(500).json({ 
+            message: 'Mail server error. Your Gmail App Password may have expired or Render is blocking SMTP.' 
+          });
+        }
+      } catch (err) {
+        console.error(`❌ Registration Email Fail for ${email}:`, err.message);
+        await User.findByIdAndDelete(user._id);
+        return res.status(500).json({ message: `Mail server failed: ${err.message}` });
+      }
       
       console.log(`[AUTH] New User: ${email} | OTP: ${otpCode}`);
       res.status(201).json({

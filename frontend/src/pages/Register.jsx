@@ -194,13 +194,13 @@ const Register = () => {
               </div>
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center min-h-[44px] overflow-hidden">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => toast.error('Google Sign-In failed')}
                 theme="outline"
                 shape="pill"
-                width={400}
+                width={360}
                 use_fedcm_for_prompt={true}
               />
             </div>
