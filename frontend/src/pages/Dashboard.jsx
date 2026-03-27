@@ -78,17 +78,25 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 min-h-[400px]">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 min-h-[440px]">
         <h2 className="text-xl font-bold text-gray-800 mb-6">Activity Overview</h2>
-        <div className="h-[340px] w-full" style={{ position: 'relative' }}>
+        <div className="w-full" style={{ minHeight: '320px' }}>
           {mounted && chartData.length > 0 && (
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+            <ResponsiveContainer width="100%" aspect={window.innerWidth > 768 ? 2.8 : 1.5}>
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
+                <Tooltip 
+                  cursor={{ fill: '#F9FAFB' }} 
+                  contentStyle={{ 
+                    borderRadius: '12px', 
+                    border: 'none', 
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                    padding: '12px' 
+                  }} 
+                />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={window.innerWidth > 768 ? 60 : 30}>
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}

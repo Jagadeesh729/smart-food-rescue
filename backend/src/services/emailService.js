@@ -2,8 +2,8 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true for 465, false for other ports
+  port: 465,
+  secure: true, // use SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
@@ -26,10 +26,10 @@ const sendEmail = async (to, subject, html) => {
     await transporter.verify();
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to: ${to}`);
-    console.log(`🔹 Message ID: ${info.messageId}`);
-    console.log(`🔹 Envelope: ${JSON.stringify(info.envelope)}`);
-    console.log(`🔹 Response: ${info.response}`);
+    console.log(`✅ SMTP SUCCESS: ${to}`);
+    console.log(`🔹 Message-ID: ${info.messageId}`);
+    console.log(`🔹 Server Response: ${info.response}`);
+    console.log(`🔹 Envelope (To): ${JSON.stringify(info.envelope.to)}`);
     return true;
   } catch (error) {
     console.error(`❌ Error sending email to ${to}:`, error.message);
