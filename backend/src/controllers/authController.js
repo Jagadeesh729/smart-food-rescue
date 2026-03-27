@@ -113,14 +113,17 @@ const loginUser = async (req, res) => {
         };
         await user.save();
 
-        // Send OTP via email (Awaited for immediate feedback in logs)
+        // Send OTP via email (Awaited for immediate feedback & reliability)
         try {
           const sent = await sendVerificationEmail(email, user.name, otpCode, true);
           if (!sent) {
-            console.warn(`⚠️ Login OTP Resend Failed for ${email}. Check SMTP.`);
+            return res.status(500).json({ 
+              message: 'Mail server error. Your Gmail App Password may have expired or Render is blocking SMTP.' 
+            });
           }
         } catch (err) {
           console.error(`❌ Login OTP Resend Error for ${email}:`, err.message);
+          return res.status(500).json({ message: `Mail server failed: ${err.message}` });
         }
 
         return res.status(401).json({ 

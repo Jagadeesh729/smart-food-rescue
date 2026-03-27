@@ -181,7 +181,7 @@ const Login = () => {
                 onError={() => toast.error('Google Sign-In failed')}
                 theme="filled_blue"
                 shape="pill"
-                width="100%"
+                width={360}
                 ux_mode="redirect"
                 use_fedcm_for_prompt={true}
               />
