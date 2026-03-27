@@ -78,17 +78,17 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 min-h-[400px]">
         <h2 className="text-xl font-bold text-gray-800 mb-6">Activity Overview</h2>
-        <div className="h-80 w-full" style={{ minWidth: 0, minHeight: 0 }}>
-          {mounted && (
-            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
+        <div className="h-80 w-full overflow-hidden" style={{ minHeight: '320px' }}>
+          {mounted && chartData.length > 0 && (
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280' }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
                 <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}

@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
 });
 
 /**
- * Send an email with robust error logging
+ * Send an email with robust error logging and SMTP trace
  */
 const sendEmail = async (to, subject, html) => {
   try {
@@ -22,13 +22,21 @@ const sendEmail = async (to, subject, html) => {
       html
     };
 
+    // Ensure transporter is ready every time we send in production
+    await transporter.verify();
+
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${to}: ${info.response}`);
+    console.log(`✅ Email sent to: ${to}`);
+    console.log(`🔹 Message ID: ${info.messageId}`);
+    console.log(`🔹 Envelope: ${JSON.stringify(info.envelope)}`);
+    console.log(`🔹 Response: ${info.response}`);
     return true;
   } catch (error) {
     console.error(`❌ Error sending email to ${to}:`, error.message);
     if (error.code === 'EAUTH') {
       console.error('CRITICAL: SMTP Authentication Failed. Check Gmail App Password.');
+    } else if (error.code === 'ESOCKET') {
+      console.error('CRITICAL: SMTP Connection Timeout. Is Render blocking port 465?');
     }
     return false;
   }

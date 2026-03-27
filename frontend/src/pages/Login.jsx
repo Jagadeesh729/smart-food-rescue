@@ -175,15 +175,17 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => toast.error('Google Sign-In failed')}
-                theme="filled_blue"
-                shape="pill"
-                width={360}
-                use_fedcm_for_prompt={true}
-              />
+            <div className="flex justify-center min-h-[44px]">
+              {!showOtp && (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => toast.error('Google Sign-In failed')}
+                  theme="filled_blue"
+                  shape="pill"
+                  width={360}
+                  use_fedcm_for_prompt={true}
+                />
+              )}
             </div>
           </>
         ) : (
