@@ -74,6 +74,7 @@ const sendVerificationEmail = async (to, name, otpCode, isResend = false) => {
 };
 
 module.exports = {
+  transporter,
   sendEmail,
   sendVerificationEmail
 };

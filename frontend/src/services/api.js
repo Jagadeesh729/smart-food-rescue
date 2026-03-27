@@ -25,9 +25,14 @@ api.interceptors.response.use(
   },
   (error) => {
     // Only redirect if it's not the login endpoint to avoid page-reset glitches
-    if (error.response && error.response.status === 401 && !error.config.url.includes('/auth/login')) {
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    if (error.response && error.response.status === 401) {
+      const message = error.response.data?.message?.toLowerCase() || '';
+      
+      // Don't logout/redirect if it's a login attempt or a verification requirement
+      if (!error.config.url.includes('/auth/login') && !message.includes('verify')) {
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

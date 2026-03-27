@@ -103,7 +103,30 @@ const loginUser = async (req, res) => {
 
     if (user && (await bcrypt.compare(password, user.password))) {
       if (!user.isVerified) {
-        return res.status(401).json({ message: 'Please verify your email first', userId: user._id });
+        // Generate NEW OTP instead of just erroring
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+        user.otp = {
+          code: otpCode,
+          expiresAt: otpExpiresAt
+        };
+        await user.save();
+
+        // Send OTP via email (Awaited for immediate feedback in logs)
+        try {
+          const sent = await sendVerificationEmail(email, user.name, otpCode, true);
+          if (!sent) {
+            console.warn(`⚠️ Login OTP Resend Failed for ${email}. Check SMTP.`);
+          }
+        } catch (err) {
+          console.error(`❌ Login OTP Resend Error for ${email}:`, err.message);
+        }
+
+        return res.status(401).json({ 
+          message: 'Please verify your email first. A new code has been sent.', 
+          userId: user._id 
+        });
       }
 
       res.json({
@@ -275,20 +298,13 @@ const testSMTP = async (req, res) => {
     const { sendEmail } = require('../services/emailService');
     const nodemailer = require('nodemailer');
     
-    const testTransporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-
-    await testTransporter.verify();
+    // Instead of creating a new transporter, use the existing one to be SURE it's working
+    const { transporter } = require('../services/emailService'); // Assuming it's exported or we should export it
     
-    // Attempt to send a real test email to the user
-    const info = await testTransporter.sendMail({
+    await transporter.verify();
+    
+    // Attempt to send a real test email to the system account
+    const info = await transporter.sendMail({
       from: `"Smart Food Rescue Support" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
       subject: '🛠️ SMTP Diagnostic Test - Smart Food Rescue',

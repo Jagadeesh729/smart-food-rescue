@@ -179,9 +179,10 @@ const Login = () => {
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => toast.error('Google Sign-In failed')}
-                theme="outline"
+                theme="filled_blue"
                 shape="pill"
-                width={400}
+                width="100%"
+                ux_mode="redirect"
                 use_fedcm_for_prompt={true}
               />
             </div>
