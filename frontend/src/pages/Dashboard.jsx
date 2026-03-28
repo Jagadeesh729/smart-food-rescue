@@ -19,13 +19,18 @@ const Dashboard = () => {
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      const [statsRes, listRes] = await Promise.all([
+      const [statsRes, listRes, requestsRes] = await Promise.all([
         api.get('/stats'),
-        user.role === 'Donor' ? api.get('/donations/my') : api.get('/requests')
+        user.role === 'Donor' ? api.get('/donations/my') : api.get('/requests'),
+        api.get('/requests') // Always fetch requests to see candidates or active rescues
       ]);
       setStats(statsRes.data);
-      if (user.role === 'Donor') setMyDonations(listRes.data);
-      else if (user.role === 'NGO') setMyRequests(listRes.data);
+      if (user.role === 'Donor') {
+        setMyDonations(listRes.data);
+        setMyRequests(requestsRes.data); // These are requests MADE TO the donor's items
+      } else if (user.role === 'NGO') {
+        setMyRequests(listRes.data);
+      }
     } catch (error) {
       console.error('Failed to fetch dashboard data', error);
       toast.error('Failed to update dashboard');
@@ -77,10 +82,21 @@ const Dashboard = () => {
   const updateStatus = async (id, status) => {
     try {
       await api.put(`/requests/${id}/status`, { status });
-      toast.success(`Status updated to ${status}`);
+      toast.success(`Action: ${status} successful`);
       fetchDashboardData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Update failed');
+      toast.error(error.response?.data?.message || 'Action failed');
+    }
+  };
+
+  const cancelRequest = async (id) => {
+    if (!window.confirm('Are you sure you want to cancel this request?')) return;
+    try {
+      await api.delete(`/requests/${id}`);
+      toast.success('Request cancelled');
+      fetchDashboardData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Cancellation failed');
     }
   };
 
@@ -261,14 +277,28 @@ const Dashboard = () => {
                           
                           <ProgressTracker currentStatus={item.status} />
                           
-                          {/* Donor Actions would typically happen on a specific Request, 
-                              but here we show the general status. To accept a request, 
-                              a Donor would see a "View Requests" button if status is Requested */}
+                          {/* Donor Actions: Show NGOs who requested this food */}
                           {item.status === 'Requested' && (
-                              <div className="mt-4 pt-4 border-top border-gray-50 flex justify-end">
-                                  <button onClick={() => toast('Go to individual requests to accept an NGO', { icon: 'ℹ️' })} className="text-emerald-600 text-xs font-bold flex items-center gap-1 hover:underline">
-                                      Manage Requests <ArrowRight size={14}/>
-                                  </button>
+                              <div className="mt-4 pt-4 border-t border-gray-50 space-y-3">
+                                  <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                                    <Users size={12}/> Incoming Requests:
+                                  </p>
+                                  {myRequests
+                                    .filter(req => req.donationId?._id === item._id && req.status === 'Pending')
+                                    .map(req => (
+                                      <div key={req._id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                        <div className="flex flex-col">
+                                          <span className="text-sm font-bold text-gray-800">{req.ngoId?.name}</span>
+                                          <span className="text-[10px] text-gray-500">{req.ngoId?.phone || 'No phone provided'}</span>
+                                        </div>
+                                        <button 
+                                          onClick={() => updateStatus(req._id, 'Accepted')}
+                                          className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition"
+                                        >
+                                          Accept NGO
+                                        </button>
+                                      </div>
+                                    ))}
                               </div>
                           )}
                         </div>
@@ -296,7 +326,7 @@ const Dashboard = () => {
                                 <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase font-black">NGO Action</span>
                               </div>
                               <div className="flex items-center gap-3 text-sm text-gray-500">
-                                <span className="flex items-center gap-1 font-medium text-gray-700"><User size={14}/> {donation.donorId?.name || 'Unknown Donor'}</span>
+                                <span className="flex items-center gap-1 font-medium text-gray-700"><Users size={14}/> {donation.donorId?.name || 'Unknown Donor'}</span>
                                 <span className="flex items-center gap-1"><Clock size={14}/> Requested {getTimeAgo(req.createdAt)}</span>
                               </div>
                               <div className="flex items-center gap-1 text-xs text-gray-400">
@@ -314,6 +344,14 @@ const Dashboard = () => {
 
                           {/* NGO Actions */}
                           <div className="mt-6 flex flex-wrap gap-2">
+                             {req.status === 'Pending' && (
+                               <button 
+                                 onClick={() => cancelRequest(req._id)}
+                                 className="bg-red-50 text-red-600 border border-red-100 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-100 transition"
+                               >
+                                 Cancel Request
+                               </button>
+                             )}
                              {req.status === 'Accepted' && (
                                 <button 
                                   onClick={() => updateStatus(req._id, 'PickedUp')}

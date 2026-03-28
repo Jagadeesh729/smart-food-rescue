@@ -119,8 +119,42 @@ const updateRequestStatus = async (req, res) => {
   }
 };
 
+// @desc    Delete a request (cancel claim)
+// @route   DELETE /api/requests/:id
+// @access  Private (NGO only)
+const deleteRequest = async (req, res) => {
+  try {
+    const request = await Request.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+    
+    // Only NGO can cancel their own pending request
+    if (request.ngoId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    if (request.status !== 'Pending' && request.status !== 'Requested') {
+      return res.status(400).json({ message: 'Cannot cancel request after it has been accepted' });
+    }
+
+    const donationId = request.donationId;
+    await request.deleteOne();
+
+    // Check if there are other requests for this donation
+    const otherRequests = await Request.find({ donationId });
+    if (otherRequests.length === 0) {
+      // If no more requests, reset donation status to 'Available' (previously 'Pending' in my new logic)
+      await Donation.findByIdAndUpdate(donationId, { status: 'Pending' });
+    }
+
+    res.json({ message: 'Request cancelled' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createRequest,
   getRequests,
-  updateRequestStatus
+  updateRequestStatus,
+  deleteRequest
 };
