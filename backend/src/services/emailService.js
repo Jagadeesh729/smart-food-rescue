@@ -3,12 +3,18 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
-  secure: true, // use SSL
+  secure: true,
+  pool: true, // Use connection pooling for efficiency
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
 });
+
+// Verify connection on startup instead of every send
+transporter.verify()
+  .then(() => console.log('✅ SMTP Server is ready for real-time OTP delivery'))
+  .catch(err => console.error('❌ SMTP Connection Error:', err.message));
 
 /**
  * Send an email with robust error logging and SMTP trace
@@ -21,9 +27,6 @@ const sendEmail = async (to, subject, html) => {
       subject,
       html
     };
-
-    // Ensure transporter is ready every time we send in production
-    await transporter.verify();
 
     const info = await transporter.sendMail(mailOptions);
     console.log(`✅ SMTP SUCCESS: ${to}`);

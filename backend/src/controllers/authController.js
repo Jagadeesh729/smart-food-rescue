@@ -124,12 +124,14 @@ const loginUser = async (req, res) => {
 
         // Send OTP via email (Awaited for immediate feedback & reliability)
         try {
+          console.log(`[AUTH] Sending Verification OTP to: ${email}`);
           const sent = await sendVerificationEmail(email, user.name, otpCode, true);
           if (!sent) {
             return res.status(500).json({ 
               message: 'Mail server error. Your Gmail App Password may have expired or Render is blocking SMTP.' 
             });
           }
+          console.log(`✅ [AUTH] OTP sucessfully sent to: ${email}`);
         } catch (err) {
           console.error(`❌ Login OTP Resend Error for ${email}:`, err.message);
           return res.status(500).json({ message: `Mail server failed: ${err.message}` });

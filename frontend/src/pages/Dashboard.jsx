@@ -9,9 +9,25 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const chartContainerRef = React.useRef(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 100);
+    let observer;
+    if (!mounted && !loading && chartContainerRef.current) {
+      observer = new ResizeObserver((entries) => {
+        if (entries[0].contentRect.width > 0) {
+          setMounted(true);
+          // Trigger a fake resize to ensure Recharts catches the new dimensions
+          setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+          observer.disconnect();
+        }
+      });
+      observer.observe(chartContainerRef.current);
+    }
+    return () => observer?.disconnect();
+  }, [loading, mounted]);
+
+  useEffect(() => {
     const fetchStats = async () => {
       try {
         const { data } = await api.get('/stats');
@@ -80,7 +96,7 @@ const Dashboard = () => {
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 min-h-[440px]">
         <h2 className="text-xl font-bold text-gray-800 mb-6">Activity Overview</h2>
-        <div className="w-full h-[320px] md:h-[400px] relative">
+        <div ref={chartContainerRef} className="w-full h-[320px] md:h-[400px] relative">
           {mounted && chartData.length > 0 && (
             <ResponsiveContainer 
               width="100%" 

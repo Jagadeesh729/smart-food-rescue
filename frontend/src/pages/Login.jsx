@@ -45,7 +45,6 @@ const Login = () => {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (err) {
-      console.error('Login error detail:', err);
       const message = err.response?.data?.message || 'Login failed. Please try again.';
       const userId = err.response?.data?.userId;
       
@@ -175,7 +174,7 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="flex justify-center min-h-[44px] overflow-hidden">
+            <div className={`flex justify-center min-h-[44px] overflow-hidden ${showOtp ? 'hidden' : 'block'}`}>
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => toast.error('Google Sign-In failed')}
