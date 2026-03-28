@@ -39,25 +39,17 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
-      // Send OTP via email (Awaited for immediate feedback & reliability)
-      try {
-        const sent = await sendVerificationEmail(email, name, otpCode);
-        if (!sent) {
-          // If email fails, delete the user so they can try again once they fix their SMTP config
-          await User.findByIdAndDelete(user._id);
-          return res.status(503).json({ 
-            message: 'Verification email failed to send. Your host (Render/Vercel) might be blocking SMTP Port 587. Check your spam folder or contact support.' 
-          });
-        }
-      } catch (err) {
-        console.error(`❌ Registration Email Fail for ${email}:`, err.message);
-        await User.findByIdAndDelete(user._id);
-        return res.status(503).json({ message: `Mail server connection timed out. Port 587 might be blocked: ${err.message}` });
-      }
+      // Fire-and-forget OTP dispatch with background logging
+      sendVerificationEmail(email, name, otpCode)
+        .then(sent => {
+          if (!sent) console.error(`⚠️ [AUTH] Registration OTP failed in background for ${email}`);
+          else console.log(`✅ [AUTH] Registration OTP sent in background to: ${email}`);
+        })
+        .catch(err => console.error(`❌ [AUTH] Registration Email Background Fail:`, err.message));
       
-      console.log(`[AUTH] New User: ${email} | OTP: ${otpCode}`);
+      console.log(`[AUTH] New User Creation (Pending): ${email} | OTP: ${otpCode}`);
       res.status(201).json({
-        message: 'User registered successfully. Please verify your email.',
+        message: 'Account created! Please verify your email. (Check Spam folder)',
         userId: user._id
       });
     } else {
@@ -124,23 +116,16 @@ const loginUser = async (req, res) => {
         };
         await user.save();
 
-        // Send OTP via email (Awaited for immediate feedback & reliability)
-        try {
-          console.log(`[AUTH] Sending Verification OTP to: ${email}`);
-          const sent = await sendVerificationEmail(email, user.name, otpCode, true);
-          if (!sent) {
-            return res.status(503).json({ 
-              message: 'Authentication server timed out while sending OTP. Your cloud host may be blocking Port 587.' 
-            });
-          }
-          console.log(`✅ [AUTH] OTP sucessfully sent to: ${email}`);
-        } catch (err) {
-          console.error(`❌ Login OTP Resend Error for ${email}:`, err.message);
-          return res.status(503).json({ message: `SMTP Connection Timeout. Port 587 might be blocked: ${err.message}` });
-        }
+        // ⚡ NON-BLOCKING FIRE-AND-FORGET OTP DISPATCH
+        sendVerificationEmail(email, user.name, otpCode, true)
+          .then(sent => {
+            if (!sent) console.error(`⚠️ [AUTH] Login OTP failed in background for ${email}`);
+            else console.log(`✅ [AUTH] Login OTP sucessfully sent in background to: ${email}`);
+          })
+          .catch(err => console.error(`❌ [AUTH] Login OTP Background Fail:`, err.message));
 
         return res.status(401).json({ 
-          message: 'Please verify your email first. A new code has been sent.', 
+          message: 'Please verify your account. A code has been sent to your email (Check Spam).', 
           userId: user._id 
         });
       }
@@ -234,18 +219,15 @@ const resendOTP = async (req, res) => {
     
     await user.save();
 
-    // Send Email (Wait for result during debugging to catch EAUTH)
-    try {
-      const emailSent = await sendVerificationEmail(user.email, user.name, otpCode, true);
-      if (!emailSent) {
-        return res.status(503).json({ message: 'SMTP Timeout: Port 587 might be blocked by your provider (Render/Vercel).' });
-      }
-    } catch (err) {
-      console.error(`❌ Resend Email Error for ${user.email}:`, err.message);
-      return res.status(503).json({ message: `Mail error: ${err.message} (Is Port 587 open?)` });
-    }
+    // ⚡ NON-BLOCKING RESEND
+    sendVerificationEmail(user.email, user.name, otpCode, true)
+      .then(sent => {
+        if (!sent) console.error(`⚠️ [AUTH] Resend OTP failed in background for ${user.email}`);
+        else console.log(`✅ [AUTH] Resend OTP successfully sent in background to: ${user.email}`);
+      })
+      .catch(err => console.error(`❌ [AUTH] Resend Email Background Fail:`, err.message));
 
-    res.json({ message: 'New OTP sent to your email' });
+    res.json({ message: 'A new code is being sent to your email (Check Spam folder).' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
