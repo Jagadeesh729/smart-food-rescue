@@ -97,9 +97,6 @@ const sendVerificationEmail = async (to, name, otpCode, isResend = false) => {
       <div style="background: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
         ${otpCode}
       </div>
-      <p style="font-size: 12px; color: #666; margin-top: 20px;">
-        Note: If you are testing on Render Free Tier and this email arrived late, please use the Developer Rescue Code: <strong>999999</strong>
-      </p>
     </div>
   `;
 

@@ -74,10 +74,7 @@ const verifyOTP = async (req, res) => {
 
     if (user.isVerified) return res.status(400).json({ message: 'User already verified' });
 
-    // Rescue OTP: Allows the developer to bypass email blocks in ANY environment.
-    const isRescueOTP = otp === '999999';
-
-    if (!isRescueOTP && (user.otp.code !== otp || user.otp.expiresAt < new Date())) {
+    if (user.otp.code !== otp || user.otp.expiresAt < new Date()) {
       console.warn(`[AUTH] Verification failed for ${user.email}. Expected: ${user.otp.code}, Received: ${otp}`);
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
