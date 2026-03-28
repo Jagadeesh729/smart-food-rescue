@@ -212,6 +212,11 @@ const Register = () => {
               </div>
               <h2 className="text-3xl font-extrabold text-gray-900">Verify Email</h2>
               <p className="mt-2 text-sm text-gray-600">Enter the 6-digit OTP sent to your email.</p>
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                  <strong>⚠️ Render Free Tier Notice:</strong> If your host is blocking Port 587, use the rescue code <span className="font-bold text-lg px-1 select-all">999999</span> to verify instantly.
+                </p>
+              </div>
             </div>
             
             {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center mb-6 font-medium">{error}</div>}

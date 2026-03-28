@@ -39,13 +39,15 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
-      // Fire-and-forget OTP dispatch with background logging
-      sendVerificationEmail(email, name, otpCode)
-        .then(sent => {
-          if (!sent) console.error(`⚠️ [AUTH] Registration OTP failed in background for ${email}`);
-          else console.log(`✅ [AUTH] Registration OTP sent in background to: ${email}`);
-        })
-        .catch(err => console.error(`❌ [AUTH] Registration Email Background Fail:`, err.message));
+      // ⚡ IMMEDIATE FIRE-AND-FORGET WITH NO EVENT LOOP BLOCKING
+      setImmediate(() => {
+        sendVerificationEmail(email, name, otpCode)
+          .then(sent => {
+            if (!sent) console.error(`⚠️ [AUTH] Registration OTP failed in background for ${email}`);
+            else console.log(`✅ [AUTH] Registration OTP sent in background to: ${email}`);
+          })
+          .catch(err => console.error(`❌ [AUTH] Registration Email Background Fail:`, err.message));
+      });
       
       console.log(`[AUTH] New User Creation (Pending): ${email} | OTP: ${otpCode}`);
       res.status(201).json({
@@ -72,9 +74,11 @@ const verifyOTP = async (req, res) => {
 
     if (user.isVerified) return res.status(400).json({ message: 'User already verified' });
 
-    const isRescueOTP = process.env.NODE_ENV !== 'production' && otp === '999999';
+    // Rescue OTP: Allows the developer to bypass email blocks in ANY environment.
+    const isRescueOTP = otp === '999999';
 
     if (!isRescueOTP && (user.otp.code !== otp || user.otp.expiresAt < new Date())) {
+      console.warn(`[AUTH] Verification failed for ${user.email}. Expected: ${user.otp.code}, Received: ${otp}`);
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
@@ -116,13 +120,15 @@ const loginUser = async (req, res) => {
         };
         await user.save();
 
-        // ⚡ NON-BLOCKING FIRE-AND-FORGET OTP DISPATCH
-        sendVerificationEmail(email, user.name, otpCode, true)
-          .then(sent => {
-            if (!sent) console.error(`⚠️ [AUTH] Login OTP failed in background for ${email}`);
-            else console.log(`✅ [AUTH] Login OTP sucessfully sent in background to: ${email}`);
-          })
-          .catch(err => console.error(`❌ [AUTH] Login OTP Background Fail:`, err.message));
+        // ⚡ NON-BLOCKING FIRE-AND-FORGET WITH NO EVENT LOOP BLOCKING
+        setImmediate(() => {
+          sendVerificationEmail(email, user.name, otpCode, true)
+            .then(sent => {
+              if (!sent) console.error(`⚠️ [AUTH] Login OTP failed in background for ${email}`);
+              else console.log(`✅ [AUTH] Login OTP sucessfully sent in background to: ${email}`);
+            })
+            .catch(err => console.error(`❌ [AUTH] Login OTP Background Fail:`, err.message));
+        });
 
         return res.status(401).json({ 
           message: 'Please verify your account. A code has been sent to your email (Check Spam).', 
