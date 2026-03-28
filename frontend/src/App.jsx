@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
-import { useSocket } from './hooks/useSocket';
 
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -26,8 +25,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 // Wrapper to initialize hooks that require Router context if any
 const AppContent = () => {
-  useSocket(); // Initialize socket connection globally
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900 font-sans">
       <Navbar />

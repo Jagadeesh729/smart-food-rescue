@@ -2,8 +2,8 @@ import React, { useEffect, useState, useContext, useCallback } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
-import { Package, CheckCircle, Clock, Users, MapPin, ExternalLink, ArrowRight, Timer, AlertCircle } from 'lucide-react';
-import { useSocket } from '../hooks/useSocket';
+import { Package, CheckCircle, Clock, Users, MapPin, ExternalLink, ArrowRight, Timer, AlertCircle, User } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
