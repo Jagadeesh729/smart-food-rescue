@@ -28,9 +28,18 @@ const createRequest = async (req, res) => {
       message
     });
 
+    // Update donation status to 'Requested'
+    donation.status = 'Requested';
+    await donation.save();
+
     // Notify Donor in real-time
     const io = getIo();
-    io.to(`user_${donation.donorId}`).emit('newRequest', { donationId, requestId: request._id, ngoName: req.user.name });
+    io.to(`user_${donation.donorId}`).emit('newRequest', { 
+      donationId, 
+      requestId: request._id, 
+      ngoName: req.user.name,
+      status: 'Requested'
+    });
 
     res.status(201).json(request);
   } catch (error) {
@@ -82,22 +91,27 @@ const updateRequestStatus = async (req, res) => {
 
     // Side effects based on status
     if (status === 'Accepted') {
-      // Mark donation as Pending or Claimed depending on flow
-      await Donation.findByIdAndUpdate(request.donationId._id, { status: 'Pending' });
-      
+      await Donation.findByIdAndUpdate(request.donationId._id, { status: 'Accepted' });
       // Reject other requests
       await Request.updateMany(
         { donationId: request.donationId._id, _id: { $ne: request._id } },
         { status: 'Rejected' }
       );
+    } else if (status === 'PickedUp') {
+        await Donation.findByIdAndUpdate(request.donationId._id, { status: 'PickedUp' });
     } else if (status === 'Completed') {
-      await Donation.findByIdAndUpdate(request.donationId._id, { status: 'Claimed' });
+      await Donation.findByIdAndUpdate(request.donationId._id, { status: 'Completed' });
     }
 
     // Notify the other party
     const io = getIo();
     const notifyUserId = req.user.role === 'Donor' ? request.ngoId : request.donationId.donorId;
-    io.to(`user_${notifyUserId}`).emit('statusUpdate', { requestId: request._id, status, donationTitle: request.donationId.title });
+    io.to(`user_${notifyUserId}`).emit('statusUpdate', { 
+        requestId: request._id, 
+        status, 
+        donationId: request.donationId._id,
+        donationTitle: request.donationId.title 
+    });
 
     res.json(request);
   } catch (error) {

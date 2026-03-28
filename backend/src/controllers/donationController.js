@@ -80,14 +80,18 @@ const createDonation = async (req, res) => {
   }
 };
 
-// @desc    Get all active donations (Available)
+// @desc    Get all active donations (Pending or Requested)
 // @route   GET /api/donations
 // @access  Public
 const getDonations = async (req, res) => {
   try {
     const { lat, lng, radius } = req.query; // radius in km
     
-    let query = { status: 'Available' };
+    // Browse should only see food that hasn't been claimed yet (Pending or Requested)
+    let query = { 
+      status: { $in: ['Pending', 'Requested'] },
+      expiryTime: { $gt: new Date() } 
+    };
 
     if (lat && lng && radius) {
       query['location.geoCoords'] = {
@@ -101,7 +105,20 @@ const getDonations = async (req, res) => {
       };
     }
 
-    const donations = await Donation.find(query).populate('donorId', 'name email phone');
+    let donations = await Donation.find(query).populate('donorId', 'name email phone');
+
+    if (lat && lng) {
+      donations = donations.map(donation => {
+        const d = donation.toObject();
+        if (d.location?.coordinates?.lat) {
+          d.distance = calculateDistance(
+            parseFloat(lat), parseFloat(lng),
+            d.location.coordinates.lat, d.location.coordinates.lng
+          ).toFixed(1);
+        }
+        return d;
+      });
+    }
 
     res.json(donations);
   } catch (error) {
@@ -125,8 +142,21 @@ const getDonationById = async (req, res) => {
   }
 };
 
+// @desc    Get donations by current donor
+// @route   GET /api/donations/my
+// @access  Private (Donor only)
+const getMyDonations = async (req, res) => {
+  try {
+    const donations = await Donation.find({ donorId: req.user._id }).sort({ createdAt: -1 });
+    res.json(donations);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createDonation,
   getDonations,
-  getDonationById
+  getDonationById,
+  getMyDonations
 };

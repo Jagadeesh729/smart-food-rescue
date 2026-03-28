@@ -19,12 +19,33 @@ const BrowseDonations = () => {
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    const fetchDonations = async () => {
+    const getLocationAndDonations = async () => {
+      let lat, lng;
+      
+      // Try to get current position
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            lat = position.coords.latitude;
+            lng = position.coords.longitude;
+            setUserLocation({ lat, lng });
+            fetchDonations(lat, lng);
+          },
+          () => fetchDonations() // Fallback if blocked
+        );
+      } else {
+        fetchDonations();
+      }
+    };
+
+    const fetchDonations = async (lat, lng) => {
       try {
-        const { data } = await api.get('/donations');
+        const query = lat && lng ? `?lat=${lat}&lng=${lng}&radius=50` : '';
+        const { data } = await api.get(`/donations${query}`);
         setDonations(data);
       } catch (err) {
         console.error(err);
@@ -32,12 +53,14 @@ const BrowseDonations = () => {
         setLoading(false);
       }
     };
-    fetchDonations();
+
+    getLocationAndDonations();
   }, []);
 
   const claimDonation = async (id) => {
     setClaimingId(id);
     try {
+      const donation = donations.find(d => d._id === id);
       await api.post('/requests', { donationId: id, message: 'We would like to claim this food' });
       alert('Request sent successfully!');
       setDonations(donations.filter(d => d._id !== id));
@@ -75,9 +98,14 @@ const BrowseDonations = () => {
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">{donation.description}</p>
-                <div className="flex items-center text-xs text-gray-500 mb-4 gap-4">
-                  <span className="flex items-center gap-1"><MapPin size={14}/> {donation.location?.address || 'Location Hidden'}</span>
-                  <span className="flex items-center gap-1"><Clock size={14}/> Expires: {new Date(donation.expiryTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+                <div className="flex flex-wrap items-center text-xs text-gray-500 mb-4 gap-x-4 gap-y-2">
+                  <span className="flex items-center gap-1 shrink-0"><MapPin size={14}/> {donation.location?.address || 'Location Hidden'}</span>
+                  {donation.distance && (
+                    <span className="flex items-center gap-1 text-emerald-600 font-bold shrink-0">
+                      <Navigation size={14}/> {donation.distance} km away
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1 shrink-0"><Clock size={14}/> Expires: {new Date(donation.expiryTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                 </div>
                 {user?.role === 'NGO' && (
                   <Button 

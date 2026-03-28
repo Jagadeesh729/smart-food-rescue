@@ -12,24 +12,34 @@ const getDashboardStats = async (req, res) => {
 
     if (role === 'Donor') {
       const totalDonations = await Donation.countDocuments({ donorId: req.user._id });
-      const completedDonations = await Donation.countDocuments({ donorId: req.user._id, status: 'Claimed' });
+      const activeDonations = await Donation.countDocuments({ donorId: req.user._id, status: { $nin: ['Completed', 'Expired'] } });
       const requestsReceived = await Request.countDocuments({ 
         donationId: { $in: await Donation.find({ donorId: req.user._id }).distinct('_id') } 
       });
+      const completedDonations = await Donation.countDocuments({ donorId: req.user._id, status: 'Completed' });
 
-      stats = { totalDonations, completedDonations, requestsReceived };
+      stats = { totalDonations, activeDonations, requestsReceived, completedDonations };
 
     } else if (role === 'NGO') {
-      const activeRequests = await Request.countDocuments({ ngoId: req.user._id, status: { $in: ['Pending', 'Accepted'] } });
-      const completedRequests = await Request.countDocuments({ ngoId: req.user._id, status: 'Completed' });
-      const availableDonations = await Donation.countDocuments({ status: 'Available' });
+      const availableDonations = await Donation.countDocuments({ 
+        status: { $in: ['Pending', 'Requested'] }, 
+        expiryTime: { $gt: new Date() } 
+      });
+      const activeRequests = await Request.countDocuments({ 
+        ngoId: req.user._id, 
+        status: { $in: ['Pending', 'Accepted', 'PickedUp'] } 
+      });
+      const completedRequests = await Request.countDocuments({ 
+        ngoId: req.user._id, 
+        status: 'Completed' 
+      });
 
-      stats = { activeRequests, completedRequests, availableDonations };
+      stats = { availableDonations, activeRequests, completedRequests };
 
     } else if (role === 'Admin') {
       const totalUsers = await User.countDocuments();
       const totalDonations = await Donation.countDocuments();
-      const completedDonations = await Donation.countDocuments({ status: 'Claimed' });
+      const completedDonations = await Donation.countDocuments({ status: 'Completed' });
       const totalNGOs = await User.countDocuments({ role: 'NGO' });
       
       stats = { totalUsers, totalDonations, completedDonations, totalNGOs };
