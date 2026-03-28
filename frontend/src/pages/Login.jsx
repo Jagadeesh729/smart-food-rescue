@@ -51,7 +51,7 @@ const Login = () => {
       if (message.toLowerCase().includes('verify') && userId) {
         setOtpData(prev => ({ ...prev, userId }));
         setShowOtp(true);
-        toast( 'Please verify your email to continue.', { icon: 'ℹ️' });
+        toast('OTP sent! Please check your Inbox and Spam/Junk folder.', { icon: 'ℹ️', duration: 6000 });
       } else {
         setError(message);
         toast.error(message);
@@ -118,8 +118,7 @@ const Login = () => {
     <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-8 border border-gray-100">
         
-        {!showOtp ? (
-          <>
+        <div className={showOtp ? 'hidden' : 'block'}>
             <div className="text-center">
               <div className="mx-auto h-12 w-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <LogIn size={24} />
@@ -174,7 +173,7 @@ const Login = () => {
               </div>
             </div>
 
-            <div className={`flex justify-center min-h-[44px] overflow-hidden ${showOtp ? 'hidden' : 'block'}`}>
+            <div className="flex justify-center min-h-[44px] overflow-hidden">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => toast.error('Google Sign-In failed')}
@@ -184,9 +183,9 @@ const Login = () => {
                 use_fedcm_for_prompt={true}
               />
             </div>
-          </>
-        ) : (
-          <>
+        </div>
+
+        <div className={!showOtp ? 'hidden' : 'block'}>
             <div className="text-center mb-8">
               <div className="mx-auto h-12 w-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
                 <ShieldCheck size={24} />
@@ -226,8 +225,7 @@ const Login = () => {
                 </button>
               </div>
             </form>
-          </>
-        )}
+        </div>
         
         {!showOtp && (
           <p className="text-center text-sm text-gray-600 mt-6">

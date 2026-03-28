@@ -85,7 +85,7 @@ const Register = () => {
       const res = await register(formData);
       setOtpData({ ...otpData, userId: res.userId });
       setShowOtp(true);
-      toast.success('Account created! Please verify your email.');
+      toast.success('Account created! Please check your Inbox and Spam/Junk folder for the OTP.', { duration: 6000 });
     } catch (err) {
       const msg = err.response?.data?.message || 'Registration failed.';
       setError(msg);
@@ -137,8 +137,7 @@ const Register = () => {
     <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 border border-gray-100">
         
-        {!showOtp ? (
-          <>
+        <div className={showOtp ? 'hidden' : 'block'}>
             <div className="text-center mb-8">
               <div className="mx-auto h-12 w-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
                 <UserPlus size={24} />
@@ -204,9 +203,9 @@ const Register = () => {
                 use_fedcm_for_prompt={true}
               />
             </div>
-          </>
-        ) : (
-          <>
+        </div>
+
+        <div className={!showOtp ? 'hidden' : 'block'}>
             <div className="text-center mb-8">
               <div className="mx-auto h-12 w-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
                 <ShieldCheck size={24} />
@@ -246,8 +245,7 @@ const Register = () => {
                 </button>
               </div>
             </form>
-          </>
-        )}
+        </div>
 
         {!showOtp && (
           <p className="text-center text-sm text-gray-600 mt-6">
