@@ -1,6 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, verifyOTP, resendOTP, checkEmail, getUserProfile, googleLogin, testSMTP } = require('../controllers/authController');
+const {
+  registerUser,
+  loginUser,
+  verifyOTP,
+  resendOTP,
+  checkEmail,
+  getUserProfile,
+  updateProfile,
+  googleLogin,
+  testSMTP
+} = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.post('/register', registerUser);
@@ -11,5 +21,6 @@ router.post('/google', googleLogin);
 router.get('/check-email', checkEmail);
 router.get('/test-smtp', testSMTP);
 router.get('/profile', protect, getUserProfile);
+router.put('/profile', protect, updateProfile);
 
 module.exports = router;

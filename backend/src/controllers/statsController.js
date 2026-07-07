@@ -77,6 +77,46 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-module.exports = {
-  getDashboardStats
+// @desc    Get public platform statistics for the home page
+// @route   GET /api/stats/public
+// @access  Public
+const getPublicStats = async (req, res) => {
+  try {
+    const [
+      totalDonations,
+      completedDonations,
+      totalNGOs,
+      totalDonors,
+      activeDonations
+    ] = await Promise.all([
+      Donation.countDocuments(),
+      Donation.countDocuments({ status: 'Completed' }),
+      User.countDocuments({ role: 'NGO' }),
+      User.countDocuments({ role: 'Donor' }),
+      Donation.countDocuments({
+        status: { $in: ['Pending', 'Requested', 'Accepted', 'PickedUp'] },
+        expiryTime: { $gt: new Date() }
+      })
+    ]);
+
+    // Estimate meals: assume avg 2.5 meals per completed donation unit
+    const estimatedMeals = Math.round(completedDonations * 12);
+
+    res.json({
+      totalDonations,
+      completedDonations,
+      activeDonations,
+      totalNGOs,
+      totalDonors,
+      estimatedMeals
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
+
+module.exports = {
+  getDashboardStats,
+  getPublicStats
+};
+
