@@ -8,10 +8,10 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loggedInUser = localStorage.getItem('user');
-    if (loggedInUser) {
+    const stored = localStorage.getItem('user');
+    if (stored) {
       try {
-        setUser(JSON.parse(loggedInUser));
+        setUser(JSON.parse(stored));
       } catch (error) {
         console.error('Failed to parse stored user data:', error);
         localStorage.removeItem('user');
@@ -56,13 +56,34 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  // Update profile — syncs backend data back to localStorage and context
+  const updateProfile = async (profileData) => {
+    const { data } = await api.put('/auth/profile', profileData);
+    // Server returns a fresh token + updated user fields — update localStorage
+    const updatedUser = { ...user, ...data };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, verifyOTP, resendOTP, checkEmail, googleLogin, logout, loading }}>
+    <AuthContext.Provider value={{
+      user,
+      login,
+      register,
+      verifyOTP,
+      resendOTP,
+      checkEmail,
+      googleLogin,
+      updateProfile,
+      logout,
+      loading
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   );

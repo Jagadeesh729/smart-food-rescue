@@ -11,12 +11,16 @@ const AddDonation = () => {
     title: '', description: '', foodType: 'Cooked', quantity: '', unit: 'kg', expiryTime: ''
   });
   const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [location, setLocation] = useState(null);
   const [addressInput, setAddressInput] = useState('');
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
+  // Min expiry time: at least 30 minutes from now
+  const minExpiry = new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16);
+
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -25,7 +29,12 @@ const AddDonation = () => {
 
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setImage(e.target.files[0]);
+      const file = e.target.files[0];
+      setImage(file);
+      // Show preview
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -74,7 +83,12 @@ const AddDonation = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!location) return setError("Location is required.");
+    if (!location) return setError('Location is required.');
+
+    // Validate expiry time is in the future
+    if (formData.expiryTime && new Date(formData.expiryTime) <= new Date()) {
+      return setError('Expiry time must be in the future (at least 30 minutes from now).');
+    }
     
     setLoading(true);
     setError('');
@@ -133,7 +147,7 @@ const AddDonation = () => {
             
             <div>
               <label htmlFor="expiryTime" className="block text-gray-700 text-sm font-bold mb-2">Expiry Time</label>
-              <input id="expiryTime" type="datetime-local" name="expiryTime" value={formData.expiryTime} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              <input id="expiryTime" type="datetime-local" name="expiryTime" value={formData.expiryTime} onChange={handleChange} required min={minExpiry} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
             </div>
 
             <div>
@@ -151,13 +165,27 @@ const AddDonation = () => {
             </div>
 
             <div>
-              <label htmlFor="photo-upload" className="block text-gray-700 text-sm font-bold mb-2">Upload Photo</label>
+              <label htmlFor="photo-upload" className="block text-gray-700 text-sm font-bold mb-2">Upload Photo (Optional)</label>
               <div className="flex items-center justify-center w-full">
-                <label htmlFor="photo-upload" className="flex flex-col flex-1 items-center px-4 py-2 bg-white rounded-lg border border-gray-300 border-dashed cursor-pointer hover:bg-gray-50">
-                  <UploadCloud className="w-6 h-6 text-gray-400" />
-                  <span className="mt-1 text-xs text-gray-500">{image ? image.name : 'Select a file'}</span>
-                  <input id="photo-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                </label>
+                {imagePreview ? (
+                  <div className="relative flex-1">
+                    <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-gray-300" />
+                    <button
+                      type="button"
+                      onClick={() => { setImage(null); setImagePreview(null); }}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold hover:bg-red-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label htmlFor="photo-upload" className="flex flex-col flex-1 items-center px-4 py-4 bg-white rounded-lg border border-gray-300 border-dashed cursor-pointer hover:bg-gray-50 transition">
+                    <UploadCloud className="w-8 h-8 text-gray-300 mb-1" />
+                    <span className="text-xs text-gray-500 font-medium">Click to upload a photo</span>
+                    <span className="text-[10px] text-gray-400">JPG, PNG, WebP • Max 5MB</span>
+                    <input id="photo-upload" type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                  </label>
+                )}
               </div>
             </div>
           </div>
