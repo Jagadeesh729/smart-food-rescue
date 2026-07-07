@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { AuthContext } from './AuthContext';
-import toast from 'react-hot-toast';
 
 const SocketContext = createContext(null);
 
@@ -9,36 +8,41 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const { user } = useContext(AuthContext);
 
+  // FIX: Use user._id as dependency (not the full user object) to prevent
+  // unnecessary socket reconnects when auth state updates with same user
+  const userId = user?._id;
+
   useEffect(() => {
     let socketInstance;
 
-    if (user) {
+    if (userId) {
       socketInstance = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
         withCredentials: true,
-        transports: ['websocket', 'polling'] // Ensure compatibility
+        transports: ['websocket', 'polling']
       });
 
       socketInstance.on('connect', () => {
-        console.log('✅ Connected to socket server');
-        socketInstance.emit('joinRoom', user._id);
+        console.log('✅ [Socket] Connected to server');
+        socketInstance.emit('joinRoom', userId);
       });
 
       socketInstance.on('connect_error', (err) => {
-        console.error('❌ Socket connection error:', err.message);
-        // Added console warning as requested by the user
-        console.warn('Socket not available yet. Real-time updates may be delayed.');
+        // Non-fatal — real-time updates will just be delayed
+        console.warn('⚠️ [Socket] Connection error (real-time updates may be delayed):', err.message);
       });
 
-      // Global socket events if any
-      socketInstance.on('newRequest', (data) => {
-        toast.success(`New request for ${data.donationTitle || 'your donation'}!`, { icon: '🍱' });
+      socketInstance.on('disconnect', (reason) => {
+        console.log(`🔌 [Socket] Disconnected: ${reason}`);
       });
 
-      socketInstance.on('statusUpdate', (data) => {
-        toast(`Donation status updated to ${data.status}`, { icon: '🔔' });
-      });
+      // FIX: Do NOT add newRequest/statusUpdate listeners here.
+      // Those are component-level concerns handled in Dashboard.jsx to avoid
+      // duplicate toasts. Only global/cross-app events belong here.
 
       setSocket(socketInstance);
+    } else {
+      // User logged out — clear socket
+      setSocket(null);
     }
 
     return () => {
@@ -46,9 +50,8 @@ export const SocketProvider = ({ children }) => {
         socketInstance.disconnect();
       }
     };
-  }, [user]);
+  }, [userId]); // FIX: depend on userId, not the full user object
 
-  // Provide an object with the socket for easy destructuring
   return (
     <SocketContext.Provider value={{ socket }}>
       {children}
@@ -56,18 +59,16 @@ export const SocketProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use the socket context safely
+// Custom hook with safe null checks
 export const useSocket = () => {
   const context = useContext(SocketContext);
-  
-  // Defensive programming: check if context exists
+
   if (context === undefined) {
     throw new Error('useSocket must be used within a SocketProvider');
   }
 
-  // Handle the case where the context itself might be null (not provided at all)
+  // If context is null (before mount), return safe default
   if (!context) {
-    console.warn('SocketContext is null. Make sure SocketProvider wraps your App.');
     return { socket: null };
   }
 

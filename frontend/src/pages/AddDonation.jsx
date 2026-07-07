@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import { UploadCloud, MapPin } from 'lucide-react';
+import { UploadCloud, MapPin, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const AddDonation = () => {
   const [formData, setFormData] = useState({
@@ -29,22 +30,23 @@ const AddDonation = () => {
   };
 
   const getLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            address: "Current Location"
-          });
-        },
-        () => {
-          alert("Unable to retrieve your location");
-        }
-      );
-    } else {
-      alert("Geolocation is not supported by your browser");
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser. Please enter address manually.');
+      return;
     }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          address: 'Current Location'
+        });
+        setError('');
+      },
+      () => {
+        setError('Unable to retrieve your location. Please enter address manually or check browser permissions.');
+      }
+    );
   };
 
   const handleAddressSearch = async () => {
@@ -86,9 +88,10 @@ const AddDonation = () => {
       await api.post('/donations', submitData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      toast.success('Donation listed successfully!');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create donation');
+      setError(err.response?.data?.message || 'Failed to create donation. Please try again.');
     } finally {
       setLoading(false);
     }
