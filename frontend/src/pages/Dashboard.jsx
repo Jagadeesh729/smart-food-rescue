@@ -112,13 +112,18 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 // ─────────────────────────────────────────────
 // Stat Card component
 // ─────────────────────────────────────────────
-const StatCard = ({ label, value, icon: Icon, color }) => (
-  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition group overflow-hidden relative">
+const StatCard = ({ label, value, icon: Icon, color, subText }) => (
+  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition group overflow-hidden relative flex flex-col justify-between min-h-[110px]">
     <div className={`absolute top-0 right-0 w-16 h-16 opacity-5 transform translate-x-4 -translate-y-4 ${color}`}>
       <Icon size={64} />
     </div>
-    <p className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
-    <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mt-1">{value ?? '—'}</h3>
+    <div>
+      <p className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
+      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mt-1">{value ?? '—'}</h3>
+    </div>
+    {subText && (
+      <p className="text-[11px] text-gray-400 mt-2 font-semibold flex items-center gap-1 shrink-0">{subText}</p>
+    )}
   </div>
 );
 
@@ -200,14 +205,23 @@ const Dashboard = () => {
       toast(`"${data.donationTitle || 'Donation'}" status → ${config.label}`, { icon: '🔔' });
     };
 
+    const handleNewDonation = (data) => {
+      fetchDashboardData();
+      if (user?.role === 'NGO') {
+        toast(`New food donation available: "${data.title || 'Food'}"`, { icon: '🍱' });
+      }
+    };
+
     socket.on('newRequest', handleNewRequest);
     socket.on('statusUpdate', handleStatusUpdate);
+    socket.on('newDonationBroadcast', handleNewDonation);
 
     return () => {
       socket.off('newRequest', handleNewRequest);
       socket.off('statusUpdate', handleStatusUpdate);
+      socket.off('newDonationBroadcast', handleNewDonation);
     };
-  }, [socket, fetchDashboardData]);
+  }, [socket, fetchDashboardData, user?.role]);
 
   // ResizeObserver for chart mount
   useEffect(() => {
@@ -273,11 +287,41 @@ const Dashboard = () => {
       { name: 'Expired',   value: stats.expiredDonations || 0 },
     ];
     statCards = [
-      { label: 'Total Donations',  value: stats.totalDonations,     icon: Package,       color: 'text-blue-500' },
-      { label: 'Active',           value: stats.activeDonations,     icon: TrendingUp,    color: 'text-emerald-500' },
-      { label: 'Requests Received', value: stats.requestsReceived,  icon: Users,         color: 'text-amber-500' },
-      { label: 'Completed',        value: stats.completedDonations,  icon: CheckCircle,   color: 'text-purple-500' },
-      { label: 'Expired',          value: stats.expiredDonations,    icon: AlertTriangle, color: 'text-red-500' },
+      { 
+        label: 'Total Donations',  
+        value: stats.totalDonations,     
+        icon: Package,       
+        color: 'text-blue-500',
+        subText: stats.donationsToday ? `+${stats.donationsToday} listed today` : 'No new listings today'
+      },
+      { 
+        label: 'Active',           
+        value: stats.activeDonations,     
+        icon: TrendingUp,    
+        color: 'text-emerald-500',
+        subText: 'Pending claim or pickup'
+      },
+      { 
+        label: 'Requests Received', 
+        value: stats.requestsReceived,  
+        icon: Users,         
+        color: 'text-amber-500',
+        subText: stats.requestsToday ? `+${stats.requestsToday} requested today` : 'No requests today'
+      },
+      { 
+        label: 'Completed',        
+        value: stats.completedDonations,  
+        icon: CheckCircle,   
+        color: 'text-purple-500',
+        subText: stats.completedToday ? `+${stats.completedToday} completed today` : '0 completed today'
+      },
+      { 
+        label: 'Expired',          
+        value: stats.expiredDonations,    
+        icon: AlertTriangle, 
+        color: 'text-red-500',
+        subText: 'Exceeded safety window'
+      },
     ];
   } else if (user.role === 'NGO' && stats) {
     chartData = [
@@ -287,28 +331,84 @@ const Dashboard = () => {
       { name: "Today's",     value: stats.todayPickups || 0 },
     ];
     statCards = [
-      { label: 'Available Food',    value: stats.availableDonations, icon: Package,     color: 'text-blue-500' },
-      { label: 'Active Requests',   value: stats.activeRequests,     icon: TrendingUp,  color: 'text-emerald-500' },
-      { label: 'Completed Pickups', value: stats.completedRequests,  icon: CheckCircle, color: 'text-purple-500' },
-      { label: "Today's Pickups",   value: stats.todayPickups,       icon: Calendar,    color: 'text-amber-500' },
+      { 
+        label: 'Available Food',    
+        value: stats.availableDonations, 
+        icon: Package,     
+        color: 'text-blue-500',
+        subText: 'Unclaimed nearby donations'
+      },
+      { 
+        label: 'Active Requests',   
+        value: stats.activeRequests,     
+        icon: TrendingUp,  
+        color: 'text-emerald-500',
+        subText: stats.requestsToday ? `+${stats.requestsToday} claimed today` : 'No new claims today'
+      },
+      { 
+        label: 'Completed Pickups', 
+        value: stats.completedRequests,  
+        icon: CheckCircle, 
+        color: 'text-purple-500',
+        subText: stats.todayPickups ? `+${stats.todayPickups} completed today` : '0 completed today'
+      },
+      { 
+        label: "Today's Pickups",   
+        value: stats.todayPickups,       
+        icon: Calendar,    
+        color: 'text-amber-500',
+        subText: 'Rescues completed today'
+      },
     ];
   }
 
   // ── Filtered lists ──
   const filterStatuses = user.role === 'Donor'
-    ? ['All', 'Pending', 'Requested', 'Accepted', 'PickedUp', 'Completed', 'Expired']
-    : ['All', 'Pending', 'Accepted', 'PickedUp', 'Completed', 'Rejected'];
+    ? ['All', 'Active', 'Requested', 'Accepted', 'Completed', 'Expired']
+    : ['All', 'Available', 'Active', 'Completed'];
 
   const filteredDonations = myDonations.filter(item => {
-    const matchStatus = statusFilter === 'All' || item.status === statusFilter;
-    const matchSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+    // Status Filter
+    let matchStatus = true;
+    if (statusFilter === 'Active') {
+      matchStatus = ['Pending', 'Requested', 'Accepted', 'PickedUp'].includes(item.status);
+    } else if (statusFilter !== 'All') {
+      matchStatus = item.status === statusFilter;
+    }
+    
+    // Search Filter: title or category (foodType)
+    const search = searchQuery.toLowerCase();
+    const matchSearch = 
+      item.title.toLowerCase().includes(search) || 
+      item.foodType.toLowerCase().includes(search);
+      
     return matchStatus && matchSearch;
   });
 
   const filteredRequests = myRequests.filter(req => {
-    const matchStatus = statusFilter === 'All' || req.status === statusFilter;
-    const title = user.role === 'NGO' ? req.donationId?.title : req.ngoId?.name;
-    const matchSearch = (title || '').toLowerCase().includes(searchQuery.toLowerCase());
+    // Status Filter
+    let matchStatus = true;
+    if (statusFilter === 'Available') {
+      matchStatus = req.status === 'Pending';
+    } else if (statusFilter === 'Active') {
+      matchStatus = ['Accepted', 'PickedUp'].includes(req.status);
+    } else if (statusFilter === 'Completed') {
+      matchStatus = req.status === 'Completed';
+    } else if (statusFilter === 'All') {
+      matchStatus = true; // Show all requests
+    }
+    
+    // Search Filter: title, category (foodType), or donor name
+    const search = searchQuery.toLowerCase();
+    const donTitle = req.donationId?.title || '';
+    const donCategory = req.donationId?.foodType || '';
+    const donorName = req.donationId?.donorId?.name || '';
+    
+    const matchSearch = 
+      donTitle.toLowerCase().includes(search) || 
+      donCategory.toLowerCase().includes(search) || 
+      donorName.toLowerCase().includes(search);
+      
     return matchStatus && matchSearch;
   });
 
@@ -484,91 +584,101 @@ const DonorList = ({ donations, requests, onUpdateStatus }) => {
         const acceptedRequest = incomingRequests.find(r => ['Accepted', 'PickedUp'].includes(r.status));
 
         return (
-          <div key={item._id} className="p-5 bg-white border border-gray-100 rounded-xl hover:border-emerald-200 hover:shadow-sm transition">
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-              <div className="space-y-1 flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-gray-900 truncate">{item.title}</h3>
-                  <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full uppercase font-bold shrink-0">
-                    {item.foodType}
-                  </span>
-                </div>
-                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Package size={13} /> {item.quantity} {item.unit}
-                  </span>
-                  <span className="flex items-center gap-1" title={`Created at ${new Date(item.createdAt).toLocaleString()}`}>
-                    <Clock size={13} /> Created {getTimeAgo(item.createdAt)}
-                  </span>
-                  <span className="flex items-center gap-1" title={`Updated at ${new Date(item.updatedAt).toLocaleString()}`}>
-                    <Calendar size={13} /> Updated {getTimeAgo(item.updatedAt)}
-                  </span>
-                  {item.location?.address && (
-                    <span className="flex items-center gap-1">
-                      <MapPin size={13} /> {item.location.address.slice(0, 30)}{item.location.address.length > 30 ? '…' : ''}
-                    </span>
-                  )}
-                </div>
-                <div className={`flex items-center gap-1 text-xs font-semibold ${expiry.color}`}>
-                  <Timer size={12} /> {expiry.label}
-                </div>
+          <div key={item._id} className="p-5 bg-white border border-gray-100 rounded-xl hover:border-emerald-200 hover:shadow-sm transition flex flex-col md:flex-row gap-4">
+            {item.image ? (
+              <img src={item.image} alt={item.title} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-gray-100 shrink-0 self-center md:self-start shadow-sm" />
+            ) : (
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300 shrink-0 self-center md:self-start">
+                <Package size={28} />
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${config.color} shrink-0`}>
-                {config.label}
-              </span>
-            </div>
+            )}
+            
+            <div className="flex-grow min-w-0">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-gray-900 truncate">{item.title}</h3>
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full uppercase font-bold shrink-0">
+                      {item.foodType}
+                    </span>
+                  </div>
+                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Package size={13} /> {item.quantity} {item.unit}
+                    </span>
+                    <span className="flex items-center gap-1" title={`Created at ${new Date(item.createdAt).toLocaleString()}`}>
+                      <Clock size={13} /> Created {getTimeAgo(item.createdAt)}
+                    </span>
+                    <span className="flex items-center gap-1" title={`Updated at ${new Date(item.updatedAt).toLocaleString()}`}>
+                      <Calendar size={13} /> Updated {getTimeAgo(item.updatedAt)}
+                    </span>
+                    {item.location?.address && (
+                      <span className="flex items-center gap-1">
+                        <MapPin size={13} /> {item.location.address.slice(0, 30)}{item.location.address.length > 30 ? '…' : ''}
+                      </span>
+                    )}
+                  </div>
+                  <div className={`flex items-center gap-1 text-xs font-semibold ${expiry.color}`}>
+                    <Timer size={12} /> {expiry.label}
+                  </div>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${config.color} shrink-0`}>
+                  {config.label}
+                </span>
+              </div>
 
-            <ProgressTracker currentStatus={item.status} />
+              <ProgressTracker currentStatus={item.status} />
 
-            {/* Incoming pending requests */}
-            {pendingRequests.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-50 space-y-2">
-                <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                  <Users size={12} /> Incoming Requests ({pendingRequests.length})
-                </p>
-                {pendingRequests.map(req => (
-                  <div key={req._id} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-gray-800">{req.ngoId?.name}</span>
-                      <span className="text-[10px] text-gray-500">{req.ngoId?.phone || req.ngoId?.email || 'No contact'}</span>
-                      {req.message && (
-                        <span className="text-[10px] text-gray-500 italic mt-0.5">"{req.message}"</span>
+              {/* Incoming pending requests */}
+              {pendingRequests.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-50 space-y-2">
+                  <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                    <Users size={12} /> Incoming Requests ({pendingRequests.length})
+                  </p>
+                  {pendingRequests.map(req => (
+                    <div key={req._id} className="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-800">{req.ngoId?.name}</span>
+                        <span className="text-[10px] text-gray-500">{req.ngoId?.phone || req.ngoId?.email || 'No contact'}</span>
+                        {req.message && (
+                          <span className="text-[10px] text-gray-500 italic mt-0.5">"{req.message}"</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => onUpdateStatus(req._id, 'Accepted')}
+                        className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition shrink-0"
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Accepted NGO info */}
+              {acceptedRequest && (
+                <div className="mt-4 pt-4 border-t border-gray-50">
+                  <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-2">
+                    <CheckCircle size={12} className="text-emerald-500" /> Assigned NGO
+                  </p>
+                  <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                    <p className="font-bold text-sm text-gray-800">{acceptedRequest.ngoId?.name}</p>
+                    <div className="flex flex-wrap gap-3 mt-1">
+                      {acceptedRequest.ngoId?.phone && (
+                        <span className="flex items-center gap-1 text-xs text-gray-600">
+                          <Phone size={11} /> {acceptedRequest.ngoId.phone}
+                        </span>
+                      )}
+                      {acceptedRequest.ngoId?.email && (
+                        <span className="flex items-center gap-1 text-xs text-gray-600">
+                          <Mail size={11} /> {acceptedRequest.ngoId.email}
+                        </span>
                       )}
                     </div>
-                    <button
-                      onClick={() => onUpdateStatus(req._id, 'Accepted')}
-                      className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition shrink-0"
-                    >
-                      Accept
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Accepted NGO info */}
-            {acceptedRequest && (
-              <div className="mt-4 pt-4 border-t border-gray-50">
-                <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-2">
-                  <CheckCircle size={12} className="text-emerald-500" /> Assigned NGO
-                </p>
-                <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                  <p className="font-bold text-sm text-gray-800">{acceptedRequest.ngoId?.name}</p>
-                  <div className="flex flex-wrap gap-3 mt-1">
-                    {acceptedRequest.ngoId?.phone && (
-                      <span className="flex items-center gap-1 text-xs text-gray-600">
-                        <Phone size={11} /> {acceptedRequest.ngoId.phone}
-                      </span>
-                    )}
-                    {acceptedRequest.ngoId?.email && (
-                      <span className="flex items-center gap-1 text-xs text-gray-600">
-                        <Mail size={11} /> {acceptedRequest.ngoId.email}
-                      </span>
-                    )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         );
       })}
@@ -615,111 +725,121 @@ const NGOList = ({ requests, onUpdateStatus, onCancel, userLocation }) => {
         }
 
         return (
-          <div key={req._id} className="p-5 bg-white border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition">
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-              <div className="space-y-1 flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-gray-900 truncate">{donation.title}</h3>
-                  <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase font-bold shrink-0">
-                    {donation.foodType}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Package size={13} /> {donation.quantity} {donation.unit}
-                  </span>
-                  {calculatedDistance && (
-                    <span className="flex items-center gap-1 text-emerald-600 font-bold" title="Distance to donor">
-                      <Navigation size={13} className="rotate-45" /> {calculatedDistance} km
-                    </span>
-                  )}
-                  {donor?.name && (
-                    <span className="flex items-center gap-1 font-medium text-gray-700">
-                      <Users size={13} /> {donor.name}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1">
-                    <Clock size={13} /> Requested {getTimeAgo(req.createdAt)}
-                  </span>
-                </div>
-                {donation.location?.address && (
-                  <div className="flex items-center gap-1 text-xs text-gray-400">
-                    <MapPin size={11} /> {donation.location.address}
-                  </div>
-                )}
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs pt-1">
-                  {expiry && (
-                    <div className={`flex items-center gap-1 font-semibold ${expiry.color}`}>
-                      <Timer size={11} /> {expiry.label}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1 text-amber-600 font-semibold">
-                    <Calendar size={11} /> Pickup Deadline: {new Date(donation.expiryTime).toLocaleString('en-US', {
-                      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-                    })}
-                  </div>
-                </div>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${config.color} shrink-0`}>
-                {config.label}
-              </span>
-            </div>
-
-            <ProgressTracker currentStatus={req.status} />
-
-            {/* Donor contact info when accepted, picked up, or completed */}
-            {['Accepted', 'PickedUp', 'Completed'].includes(req.status) && donor && (
-              <div className="mt-4 pt-4 border-t border-gray-50">
-                <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-2">
-                  <Users size={12} className="text-blue-500" /> Donor Contact
-                </p>
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 space-y-1">
-                  {donor.phone && (
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <Phone size={12} className="text-blue-500" /> {donor.phone}
-                    </div>
-                  )}
-                  {donor.email && (
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <Mail size={12} className="text-blue-500" /> {donor.email}
-                    </div>
-                  )}
-                  {donor.address?.street && (
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <MapPin size={12} className="text-blue-500" />
-                      {[donor.address.street, donor.address.city].filter(Boolean).join(', ')}
-                    </div>
-                  )}
-                </div>
+          <div key={req._id} className="p-5 bg-white border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition flex flex-col md:flex-row gap-4">
+            {donation.image ? (
+              <img src={donation.image} alt={donation.title} className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-gray-100 shrink-0 self-center md:self-start shadow-sm" />
+            ) : (
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300 shrink-0 self-center md:self-start">
+                <Package size={28} />
               </div>
             )}
 
-            {/* NGO Action Buttons */}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {req.status === 'Pending' && (
-                <button
-                  onClick={() => onCancel(req._id)}
-                  className="bg-red-50 text-red-600 border border-red-100 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-100 transition"
-                >
-                  Cancel Request
-                </button>
+            <div className="flex-grow min-w-0">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-gray-900 truncate">{donation.title}</h3>
+                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full uppercase font-bold shrink-0">
+                      {donation.foodType}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Package size={13} /> {donation.quantity} {donation.unit}
+                    </span>
+                    {calculatedDistance && (
+                      <span className="flex items-center gap-1 text-emerald-600 font-bold" title="Distance to donor">
+                        <Navigation size={13} className="rotate-45" /> {calculatedDistance} km
+                      </span>
+                    )}
+                    {donor?.name && (
+                      <span className="flex items-center gap-1 font-medium text-gray-700">
+                        <Users size={13} /> {donor.name}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Clock size={13} /> Requested {getTimeAgo(req.createdAt)}
+                    </span>
+                  </div>
+                  {donation.location?.address && (
+                    <div className="flex items-center gap-1 text-xs text-gray-400">
+                      <MapPin size={11} /> {donation.location.address}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs pt-1">
+                    {expiry && (
+                      <div className={`flex items-center gap-1 font-semibold ${expiry.color}`}>
+                        <Timer size={11} /> {expiry.label}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 text-amber-600 font-semibold">
+                      <Calendar size={11} /> Pickup Deadline: {new Date(donation.expiryTime).toLocaleString('en-US', {
+                        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${config.color} shrink-0`}>
+                  {config.label}
+                </span>
+              </div>
+
+              <ProgressTracker currentStatus={req.status} />
+
+              {/* Donor contact info when accepted, picked up, or completed */}
+              {['Accepted', 'PickedUp', 'Completed'].includes(req.status) && donor && (
+                <div className="mt-4 pt-4 border-t border-gray-50">
+                  <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-2">
+                    <Users size={12} className="text-blue-500" /> Donor Contact
+                  </p>
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 space-y-1">
+                    {donor.phone && (
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <Phone size={12} className="text-blue-500" /> {donor.phone}
+                      </div>
+                    )}
+                    {donor.email && (
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <Mail size={12} className="text-blue-500" /> {donor.email}
+                      </div>
+                    )}
+                    {donor.address?.street && (
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <MapPin size={12} className="text-blue-500" />
+                        {[donor.address.street, donor.address.city].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
-              {req.status === 'Accepted' && (
-                <button
-                  onClick={() => onUpdateStatus(req._id, 'PickedUp')}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 flex items-center gap-2 transition"
-                >
-                  Mark Picked Up <ArrowRight size={13} />
-                </button>
-              )}
-              {req.status === 'PickedUp' && (
-                <button
-                  onClick={() => onUpdateStatus(req._id, 'Completed')}
-                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 flex items-center gap-2 transition"
-                >
-                  Mark Completed <CheckCircle size={13} />
-                </button>
-              )}
+
+              {/* NGO Action Buttons */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {req.status === 'Pending' && (
+                  <button
+                    onClick={() => onCancel(req._id)}
+                    className="bg-red-50 text-red-600 border border-red-100 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-100 transition"
+                  >
+                    Cancel Request
+                  </button>
+                )}
+                {req.status === 'Accepted' && (
+                  <button
+                    onClick={() => onUpdateStatus(req._id, 'PickedUp')}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 flex items-center gap-2 transition"
+                  >
+                    Mark Picked Up <ArrowRight size={13} />
+                  </button>
+                )}
+                {req.status === 'PickedUp' && (
+                  <button
+                    onClick={() => onUpdateStatus(req._id, 'Completed')}
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 flex items-center gap-2 transition"
+                  >
+                    Mark Completed <CheckCircle size={13} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
