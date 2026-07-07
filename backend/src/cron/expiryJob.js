@@ -1,29 +1,30 @@
 const cron = require('node-cron');
 const Donation = require('../models/Donation');
 
-// Run every hour
+// Run every hour to mark expired donations
 const startExpiryJob = () => {
   cron.schedule('0 * * * *', async () => {
     try {
       const now = new Date();
-      // Find all Available or Pending donations where expiryTime is in the past
+      // FIX: 'Available' was never a valid Donation status. Valid pending statuses are 'Pending' and 'Requested'.
+      // We also expire 'Requested' donations so NGOs don't see ghost requests for expired food.
       const result = await Donation.updateMany(
-        { 
-          status: { $in: ['Available', 'Pending'] },
+        {
+          status: { $in: ['Pending', 'Requested'] },
           expiryTime: { $lt: now }
         },
         { $set: { status: 'Expired' } }
       );
-      
+
       if (result.modifiedCount > 0) {
-        console.log(`Cron Job: Marked ${result.modifiedCount} donations as Expired.`);
+        console.log(`[Cron] Marked ${result.modifiedCount} donation(s) as Expired.`);
       }
     } catch (error) {
-      console.error('Error in expiry cron job:', error.message);
+      console.error('[Cron] Error in expiry job:', error.message);
     }
   });
 
-  console.log('Expiry cron job initialized.');
+  console.log('[Cron] Donation expiry job initialized (runs every hour).');
 };
 
 module.exports = startExpiryJob;
