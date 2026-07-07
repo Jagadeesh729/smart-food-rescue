@@ -22,18 +22,18 @@ const useCountUp = (target, duration = 1500, started = false) => {
   return count;
 };
 
-const StatBadge = ({ label, value, icon: Icon, color, started }) => {
+const StatBadge = ({ label, value, icon: Icon, color, started, lightText = false }) => {
   const count = useCountUp(value, 1200, started);
   return (
     <div className="text-center p-6">
       <div className={`w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-3 ${color}`}>
         <Icon size={28} />
       </div>
-      <div className="text-4xl font-black text-gray-900 mb-1">
-        {value ? count.toLocaleString() : '—'}
-        {value > 0 && <span className="text-emerald-500">+</span>}
+      <div className={`text-4xl font-black mb-1 ${lightText ? 'text-white' : 'text-gray-900'}`}>
+        {(value !== undefined && value !== null) ? count.toLocaleString() : '—'}
+        {value > 0 && <span className={lightText ? 'text-emerald-200' : 'text-emerald-500'}>+</span>}
       </div>
-      <div className="text-sm font-semibold text-gray-500">{label}</div>
+      <div className={`text-sm font-semibold ${lightText ? 'text-emerald-100' : 'text-gray-500'}`}>{label}</div>
     </div>
   );
 };
@@ -108,12 +108,12 @@ const Home = () => {
             Real People, Real Impact
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-white/10 backdrop-blur rounded-2xl p-6">
-            <StatBadge label="Donations Listed" value={stats?.totalDonations} icon={Package} color="bg-white/20 text-white" started={statsStarted} />
-            <StatBadge label="Successful Rescues" value={stats?.completedDonations} icon={CheckCircle} color="bg-white/20 text-white" started={statsStarted} />
-            <StatBadge label="Meals Served" value={stats?.estimatedMeals} icon={Heart} color="bg-white/20 text-white" started={statsStarted} />
-            <StatBadge label="Active NGOs" value={stats?.totalNGOs} icon={Users} color="bg-white/20 text-white" started={statsStarted} />
-            <StatBadge label="Food Donors" value={stats?.totalDonors} icon={Globe} color="bg-white/20 text-white" started={statsStarted} />
-            <StatBadge label="Live Now" value={stats?.activeDonations} icon={Clock} color="bg-white/20 text-white" started={statsStarted} />
+            <StatBadge label="Donations Listed" value={stats?.totalDonations} icon={Package} color="bg-white/20 text-white" started={statsStarted} lightText={true} />
+            <StatBadge label="Successful Rescues" value={stats?.completedDonations} icon={CheckCircle} color="bg-white/20 text-white" started={statsStarted} lightText={true} />
+            <StatBadge label="Meals Served" value={stats?.estimatedMeals} icon={Heart} color="bg-white/20 text-white" started={statsStarted} lightText={true} />
+            <StatBadge label="Active NGOs" value={stats?.totalNGOs} icon={Users} color="bg-white/20 text-white" started={statsStarted} lightText={true} />
+            <StatBadge label="Food Donors" value={stats?.totalDonors} icon={Globe} color="bg-white/20 text-white" started={statsStarted} lightText={true} />
+            <StatBadge label="Live Now" value={stats?.activeDonations} icon={Clock} color="bg-white/20 text-white" started={statsStarted} lightText={true} />
           </div>
         </div>
       </div>
