@@ -2,8 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
-const connectDB = require('./config/db');
 
+// Load env vars at the very beginning before any modules are required
+dotenv.config();
+
+const connectDB = require('./config/db');
 const { initSocket } = require('./sockets/socketHandler');
 const startExpiryJob = require('./cron/expiryJob');
 
@@ -12,9 +15,6 @@ const authRoutes = require('./routes/authRoutes');
 const donationRoutes = require('./routes/donationRoutes');
 const requestRoutes = require('./routes/requestRoutes');
 const statsRoutes = require('./routes/statsRoutes');
-
-// Load env vars
-dotenv.config();
 
 // Connect to database
 connectDB();
