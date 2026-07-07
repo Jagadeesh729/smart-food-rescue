@@ -207,7 +207,7 @@ const Login = () => {
                 }} 
                 required 
                 placeholder="123456"
-                className="text-center tracking-[0.5em] text-2xl font-mono"
+                inputClassName="text-center tracking-[0.5em] text-2xl font-mono"
                 autoFocus
               />
               <Button type="submit" disabled={loading} className="py-3">
