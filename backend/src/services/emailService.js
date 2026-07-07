@@ -103,4 +103,4 @@ const sendVerificationEmail = async (to, name, otpCode, isResend = false) => {
   return sendEmail(to, subject, html);
 };
 
-module.exports = { sendEmail, sendVerificationEmail };
+module.exports = { sendEmail, sendVerificationEmail, transporter };

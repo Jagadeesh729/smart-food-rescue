@@ -11,37 +11,63 @@ const getDashboardStats = async (req, res) => {
     let stats = {};
 
     if (role === 'Donor') {
-      const totalDonations = await Donation.countDocuments({ donorId: req.user._id });
-      const activeDonations = await Donation.countDocuments({ donorId: req.user._id, status: { $nin: ['Completed', 'Expired'] } });
-      const requestsReceived = await Request.countDocuments({ 
-        donationId: { $in: await Donation.find({ donorId: req.user._id }).distinct('_id') } 
-      });
-      const completedDonations = await Donation.countDocuments({ donorId: req.user._id, status: 'Completed' });
+      const donorDonationIds = await Donation.find({ donorId: req.user._id }).distinct('_id');
 
-      stats = { totalDonations, activeDonations, requestsReceived, completedDonations };
+      const [
+        totalDonations,
+        activeDonations,
+        requestsReceived,
+        completedDonations,
+        expiredDonations
+      ] = await Promise.all([
+        Donation.countDocuments({ donorId: req.user._id }),
+        Donation.countDocuments({
+          donorId: req.user._id,
+          status: { $in: ['Pending', 'Requested', 'Accepted', 'PickedUp'] }
+        }),
+        Request.countDocuments({ donationId: { $in: donorDonationIds } }),
+        Donation.countDocuments({ donorId: req.user._id, status: 'Completed' }),
+        Donation.countDocuments({ donorId: req.user._id, status: 'Expired' })
+      ]);
+
+      stats = { totalDonations, activeDonations, requestsReceived, completedDonations, expiredDonations };
 
     } else if (role === 'NGO') {
-      const availableDonations = await Donation.countDocuments({ 
-        status: { $in: ['Pending', 'Requested'] }, 
-        expiryTime: { $gt: new Date() } 
-      });
-      const activeRequests = await Request.countDocuments({ 
-        ngoId: req.user._id, 
-        status: { $in: ['Pending', 'Accepted', 'PickedUp'] } 
-      });
-      const completedRequests = await Request.countDocuments({ 
-        ngoId: req.user._id, 
-        status: 'Completed' 
-      });
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-      stats = { availableDonations, activeRequests, completedRequests };
+      const [
+        availableDonations,
+        activeRequests,
+        completedRequests,
+        todayPickups
+      ] = await Promise.all([
+        Donation.countDocuments({
+          status: { $in: ['Pending', 'Requested'] },
+          expiryTime: { $gt: new Date() }
+        }),
+        Request.countDocuments({
+          ngoId: req.user._id,
+          status: { $in: ['Pending', 'Accepted', 'PickedUp'] }
+        }),
+        Request.countDocuments({ ngoId: req.user._id, status: 'Completed' }),
+        Request.countDocuments({
+          ngoId: req.user._id,
+          status: 'Completed',
+          updatedAt: { $gte: today }
+        })
+      ]);
+
+      stats = { availableDonations, activeRequests, completedRequests, todayPickups };
 
     } else if (role === 'Admin') {
-      const totalUsers = await User.countDocuments();
-      const totalDonations = await Donation.countDocuments();
-      const completedDonations = await Donation.countDocuments({ status: 'Completed' });
-      const totalNGOs = await User.countDocuments({ role: 'NGO' });
-      
+      const [totalUsers, totalDonations, completedDonations, totalNGOs] = await Promise.all([
+        User.countDocuments(),
+        Donation.countDocuments(),
+        Donation.countDocuments({ status: 'Completed' }),
+        User.countDocuments({ role: 'NGO' })
+      ]);
+
       stats = { totalUsers, totalDonations, completedDonations, totalNGOs };
     }
 

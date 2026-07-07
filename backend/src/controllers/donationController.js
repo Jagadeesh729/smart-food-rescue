@@ -1,6 +1,7 @@
 const Donation = require('../models/Donation');
 const User = require('../models/User');
 const { calculateDistance } = require('../utils/geoHelper');
+const { broadcastNewDonation } = require('../sockets/socketHandler');
 
 // @desc    Create a new donation
 // @route   POST /api/donations
@@ -9,7 +10,7 @@ const createDonation = async (req, res) => {
   try {
     const { title, description, foodType, quantity, unit, expiryTime, location } = req.body;
     let imageUrl = '';
-    
+
     if (req.file) {
       if (req.file.path && req.file.path.startsWith('http')) {
         imageUrl = req.file.path;
@@ -20,7 +21,16 @@ const createDonation = async (req, res) => {
       }
     }
 
-    const parsedLocation = JSON.parse(location);
+    let parsedLocation;
+    try {
+      parsedLocation = JSON.parse(location);
+    } catch {
+      return res.status(400).json({ message: 'Invalid location format' });
+    }
+
+    if (!parsedLocation.lat || !parsedLocation.lng) {
+      return res.status(400).json({ message: 'Location coordinates are required' });
+    }
 
     const donation = await Donation.create({
       donorId: req.user._id,
@@ -42,25 +52,28 @@ const createDonation = async (req, res) => {
       }
     });
 
-    // Notify nearby NGOs asynchronously without blocking the response
-    (async () => {
+    // Broadcast new donation to all connected clients (for live NGO browsing)
+    broadcastNewDonation(donation);
+
+    // Notify nearby NGOs via email (non-blocking, fire-and-forget)
+    setImmediate(async () => {
       try {
         const { sendEmail } = require('../services/emailService');
         const NGOs = await User.find({ role: 'NGO' });
-        
+
         const nearbyNGOs = NGOs.filter(ngo => {
           if (!ngo.address?.coordinates?.lat) return false;
           const dist = calculateDistance(
             parsedLocation.lat, parsedLocation.lng,
             ngo.address.coordinates.lat, ngo.address.coordinates.lng
           );
-          return dist <= 5; // 5 km alert radius
+          return dist <= 5; // 5 km radius
         });
 
         const emails = nearbyNGOs.map(n => n.email);
         if (emails.length > 0) {
           await sendEmail(
-            emails.join(','), // Send BCC potentially, or comma separated
+            emails.join(','),
             `New Food Rescue Alert: ${title}`,
             `<h3>Urgent: New food donation available nearby!</h3>
              <p><strong>${title}</strong></p>
@@ -70,9 +83,9 @@ const createDonation = async (req, res) => {
           );
         }
       } catch (err) {
-        console.error("Error sending NGO notifications:", err);
+        console.error('[Donations] Error sending NGO notifications:', err.message);
       }
-    })();
+    });
 
     res.status(201).json(donation);
   } catch (error) {
@@ -86,11 +99,11 @@ const createDonation = async (req, res) => {
 const getDonations = async (req, res) => {
   try {
     const { lat, lng, radius } = req.query; // radius in km
-    
-    // Browse should only see food that hasn't been claimed yet (Pending or Requested)
-    let query = { 
+
+    // Browse should only show food that hasn't been claimed/completed yet
+    let query = {
       status: { $in: ['Pending', 'Requested'] },
-      expiryTime: { $gt: new Date() } 
+      expiryTime: { $gt: new Date() }
     };
 
     if (lat && lng && radius) {
