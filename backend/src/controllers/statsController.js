@@ -10,6 +10,9 @@ const getDashboardStats = async (req, res) => {
     const role = req.user.role;
     let stats = {};
 
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     if (role === 'Donor') {
       const donorDonationIds = await Donation.find({ donorId: req.user._id }).distinct('_id');
 
@@ -18,7 +21,10 @@ const getDashboardStats = async (req, res) => {
         activeDonations,
         requestsReceived,
         completedDonations,
-        expiredDonations
+        expiredDonations,
+        donationsToday,
+        requestsToday,
+        completedToday
       ] = await Promise.all([
         Donation.countDocuments({ donorId: req.user._id }),
         Donation.countDocuments({
@@ -27,20 +33,30 @@ const getDashboardStats = async (req, res) => {
         }),
         Request.countDocuments({ donationId: { $in: donorDonationIds } }),
         Donation.countDocuments({ donorId: req.user._id, status: 'Completed' }),
-        Donation.countDocuments({ donorId: req.user._id, status: 'Expired' })
+        Donation.countDocuments({ donorId: req.user._id, status: 'Expired' }),
+        Donation.countDocuments({ donorId: req.user._id, createdAt: { $gte: todayStart } }),
+        Request.countDocuments({ donationId: { $in: donorDonationIds }, createdAt: { $gte: todayStart } }),
+        Donation.countDocuments({ donorId: req.user._id, status: 'Completed', updatedAt: { $gte: todayStart } })
       ]);
 
-      stats = { totalDonations, activeDonations, requestsReceived, completedDonations, expiredDonations };
+      stats = { 
+        totalDonations, 
+        activeDonations, 
+        requestsReceived, 
+        completedDonations, 
+        expiredDonations,
+        donationsToday,
+        requestsToday,
+        completedToday
+      };
 
     } else if (role === 'NGO') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
       const [
         availableDonations,
         activeRequests,
         completedRequests,
-        todayPickups
+        todayPickups,
+        requestsToday
       ] = await Promise.all([
         Donation.countDocuments({
           status: { $in: ['Pending', 'Requested'] },
@@ -54,11 +70,21 @@ const getDashboardStats = async (req, res) => {
         Request.countDocuments({
           ngoId: req.user._id,
           status: 'Completed',
-          updatedAt: { $gte: today }
+          updatedAt: { $gte: todayStart }
+        }),
+        Request.countDocuments({
+          ngoId: req.user._id,
+          createdAt: { $gte: todayStart }
         })
       ]);
 
-      stats = { availableDonations, activeRequests, completedRequests, todayPickups };
+      stats = { 
+        availableDonations, 
+        activeRequests, 
+        completedRequests, 
+        todayPickups,
+        requestsToday
+      };
 
     } else if (role === 'Admin') {
       const [totalUsers, totalDonations, completedDonations, totalNGOs] = await Promise.all([
