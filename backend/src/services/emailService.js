@@ -8,23 +8,30 @@ const axios = require('axios');
 const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'smtp'; // 'brevo', 'resend', or 'smtp'
 const API_KEY = process.env.EMAIL_API_KEY;
 
-// Nodemailer Transporter (Fallback for SMTP)
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // STARTTLS
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  connectionTimeout: 5000,
-  greetingTimeout: 5000,
-  socketTimeout: 5000
-});
+let activeTransporter = null;
+
+// Lazy initializer for SMTP transporter to prevent overhead when in HTTP API Mode
+const getTransporter = () => {
+  if (!activeTransporter) {
+    activeTransporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // STARTTLS
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000
+    });
+  }
+  return activeTransporter;
+};
 
 // Diagnostic check on startup
 if (EMAIL_PROVIDER === 'smtp') {
-  transporter.verify()
+  getTransporter().verify()
     .then(() => console.log('✅ SMTP Ready (Warning: Might be blocked on Render Free Tier)'))
     .catch(err => console.error('⚠️ SMTP Warning:', err.message));
 } else {
@@ -72,7 +79,7 @@ const sendEmail = async (to, subject, html) => {
       subject,
       html
     };
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`✅ SMTP Success: ${to}`);
     return true;
   } catch (error) {
@@ -101,6 +108,11 @@ const sendVerificationEmail = async (to, name, otpCode, isResend = false) => {
   `;
 
   return sendEmail(to, subject, html);
+};
+
+const transporter = {
+  verify: () => getTransporter().verify(),
+  sendMail: (options) => getTransporter().sendMail(options)
 };
 
 module.exports = { sendEmail, sendVerificationEmail, transporter };

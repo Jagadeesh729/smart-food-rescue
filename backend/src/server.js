@@ -16,17 +16,8 @@ const donationRoutes = require('./routes/donationRoutes');
 const requestRoutes = require('./routes/requestRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 
-// Connect to database
-connectDB();
-
 const app = express();
 const server = http.createServer(app);
-
-// Initialize Socket.io
-initSocket(server);
-
-// Start Cron Jobs
-startExpiryJob();
 
 // Middleware
 const path = require('path');
@@ -78,6 +69,25 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  try {
+    // 1. Connect to Database first
+    await connectDB();
+    
+    // 2. Initialize Socket.io
+    initSocket(server);
+    
+    // 3. Start Cron Jobs
+    startExpiryJob();
+    
+    // 4. Start HTTP Server
+    server.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Fatal Startup Error: Server failed to start due to database connection failure.');
+    process.exit(1);
+  }
+};
+
+startServer();
