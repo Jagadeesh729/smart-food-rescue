@@ -96,6 +96,19 @@ const getTimeAgo = (date) => {
   return new Date(date).toLocaleDateString();
 };
 
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return (R * c).toFixed(1);
+};
+
 // ─────────────────────────────────────────────
 // Stat Card component
 // ─────────────────────────────────────────────
@@ -123,7 +136,22 @@ const Dashboard = () => {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [userLocation, setUserLocation] = useState(null);
   const chartContainerRef = React.useRef(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        () => {}
+      );
+    }
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -321,32 +349,38 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* Chart */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[360px]">
-          <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <TrendingUp size={18} className="text-blue-500" /> Metrics Overview
-          </h2>
-          <div ref={chartContainerRef} className="flex-grow w-full">
-            {mounted && chartData.length > 0 && (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} />
-                  <Tooltip
-                    cursor={{ fill: '#f9fafb' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={36}>
-                    {chartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+        {/* Left Column: Chart & Recent Activity */}
+        <div className="lg:col-span-1 space-y-6 flex flex-col">
+          {/* Chart */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[360px]">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <TrendingUp size={18} className="text-blue-500" /> Metrics Overview
+            </h2>
+            <div ref={chartContainerRef} className="flex-grow w-full">
+              {mounted && chartData.length > 0 && (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} />
+                    <Tooltip
+                      cursor={{ fill: '#f9fafb' }}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={36}>
+                      {chartData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            <p className="text-xs text-center text-gray-400 mt-2 italic">Updates in real-time</p>
           </div>
-          <p className="text-xs text-center text-gray-400 mt-2 italic">Updates in real-time</p>
+
+          {/* Recent Activity */}
+          <RecentActivityFeed role={user.role} donations={myDonations} requests={myRequests} />
         </div>
 
         {/* List Section */}
@@ -409,6 +443,7 @@ const Dashboard = () => {
                   requests={filteredRequests}
                   onUpdateStatus={updateStatus}
                   onCancel={cancelRequest}
+                  userLocation={userLocation}
                 />
               )}
             </div>
@@ -458,12 +493,15 @@ const DonorList = ({ donations, requests, onUpdateStatus }) => {
                     {item.foodType}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                   <span className="flex items-center gap-1">
                     <Package size={13} /> {item.quantity} {item.unit}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Clock size={13} /> {getTimeAgo(item.createdAt)}
+                  <span className="flex items-center gap-1" title={`Created at ${new Date(item.createdAt).toLocaleString()}`}>
+                    <Clock size={13} /> Created {getTimeAgo(item.createdAt)}
+                  </span>
+                  <span className="flex items-center gap-1" title={`Updated at ${new Date(item.updatedAt).toLocaleString()}`}>
+                    <Calendar size={13} /> Updated {getTimeAgo(item.updatedAt)}
                   </span>
                   {item.location?.address && (
                     <span className="flex items-center gap-1">
@@ -538,10 +576,7 @@ const DonorList = ({ donations, requests, onUpdateStatus }) => {
   );
 };
 
-// ─────────────────────────────────────────────
-// NGO List
-// ─────────────────────────────────────────────
-const NGOList = ({ requests, onUpdateStatus, onCancel }) => {
+const NGOList = ({ requests, onUpdateStatus, onCancel, userLocation }) => {
   if (requests.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -561,8 +596,23 @@ const NGOList = ({ requests, onUpdateStatus, onCancel }) => {
         const donation = req.donationId;
         if (!donation) return null;
 
+        // Hide expired requests automatically for NGO list
+        const isExpired = donation.status === 'Expired' || new Date(donation.expiryTime) < new Date();
+        if (isExpired && req.status !== 'Completed') {
+          return null;
+        }
+
         const expiry = donation.expiryTime ? getExpiryLabel(donation.expiryTime) : null;
         const donor = donation.donorId;
+
+        // Calculate distance on client side if geolocation is available
+        let calculatedDistance = null;
+        if (userLocation && donation.location?.coordinates) {
+          calculatedDistance = calculateDistance(
+            userLocation.lat, userLocation.lng,
+            donation.location.coordinates.lat, donation.location.coordinates.lng
+          );
+        }
 
         return (
           <div key={req._id} className="p-5 bg-white border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition">
@@ -578,6 +628,11 @@ const NGOList = ({ requests, onUpdateStatus, onCancel }) => {
                   <span className="flex items-center gap-1">
                     <Package size={13} /> {donation.quantity} {donation.unit}
                   </span>
+                  {calculatedDistance && (
+                    <span className="flex items-center gap-1 text-emerald-600 font-bold" title="Distance to donor">
+                      <Navigation size={13} className="rotate-45" /> {calculatedDistance} km
+                    </span>
+                  )}
                   {donor?.name && (
                     <span className="flex items-center gap-1 font-medium text-gray-700">
                       <Users size={13} /> {donor.name}
@@ -592,11 +647,18 @@ const NGOList = ({ requests, onUpdateStatus, onCancel }) => {
                     <MapPin size={11} /> {donation.location.address}
                   </div>
                 )}
-                {expiry && (
-                  <div className={`flex items-center gap-1 text-xs font-semibold ${expiry.color}`}>
-                    <Timer size={11} /> {expiry.label}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs pt-1">
+                  {expiry && (
+                    <div className={`flex items-center gap-1 font-semibold ${expiry.color}`}>
+                      <Timer size={11} /> {expiry.label}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 text-amber-600 font-semibold">
+                    <Calendar size={11} /> Pickup Deadline: {new Date(donation.expiryTime).toLocaleString('en-US', {
+                      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+                    })}
                   </div>
-                )}
+                </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${config.color} shrink-0`}>
                 {config.label}
@@ -605,8 +667,8 @@ const NGOList = ({ requests, onUpdateStatus, onCancel }) => {
 
             <ProgressTracker currentStatus={req.status} />
 
-            {/* Donor contact info when accepted */}
-            {req.status === 'Accepted' && donor && (
+            {/* Donor contact info when accepted, picked up, or completed */}
+            {['Accepted', 'PickedUp', 'Completed'].includes(req.status) && donor && (
               <div className="mt-4 pt-4 border-t border-gray-50">
                 <p className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1 mb-2">
                   <Users size={12} className="text-blue-500" /> Donor Contact
@@ -663,6 +725,190 @@ const NGOList = ({ requests, onUpdateStatus, onCancel }) => {
         );
       })}
     </>
+  );
+};
+
+// ─────────────────────────────────────────────
+// Recent Activity helper and component
+// ─────────────────────────────────────────────
+const getRecentActivity = (role, donations, requests) => {
+  const activities = [];
+
+  if (role === 'Donor') {
+    donations.forEach(donation => {
+      activities.push({
+        id: `don-create-${donation._id}`,
+        timestamp: new Date(donation.createdAt),
+        title: 'Donation Created',
+        description: `Listed food donation "${donation.title}"`,
+        type: 'create'
+      });
+
+      if (donation.status === 'Expired') {
+        activities.push({
+          id: `don-expire-${donation._id}`,
+          timestamp: new Date(donation.updatedAt),
+          title: 'Donation Expired',
+          description: `Donation "${donation.title}" expired`,
+          type: 'expire'
+        });
+      }
+    });
+
+    requests.forEach(req => {
+      const donTitle = req.donationId?.title || 'Unknown Donation';
+      const ngoName = req.ngoId?.name || 'an NGO';
+
+      activities.push({
+        id: `req-create-${req._id}`,
+        timestamp: new Date(req.createdAt),
+        title: 'NGO Requested Donation',
+        description: `"${ngoName}" requested "${donTitle}"`,
+        type: 'request'
+      });
+
+      if (req.status === 'Accepted') {
+        activities.push({
+          id: `req-accept-${req._id}`,
+          timestamp: new Date(req.updatedAt),
+          title: 'Request Accepted',
+          description: `Accepted request from "${ngoName}" for "${donTitle}"`,
+          type: 'accept'
+        });
+      } else if (req.status === 'PickedUp') {
+        activities.push({
+          id: `req-pickup-${req._id}`,
+          timestamp: new Date(req.updatedAt),
+          title: 'Food Picked Up',
+          description: `"${ngoName}" picked up "${donTitle}"`,
+          type: 'pickup'
+        });
+      } else if (req.status === 'Completed') {
+        activities.push({
+          id: `req-complete-${req._id}`,
+          timestamp: new Date(req.updatedAt),
+          title: 'Donation Completed',
+          description: `"${ngoName}" completed rescue of "${donTitle}"`,
+          type: 'complete'
+        });
+      }
+    });
+  } else if (role === 'NGO') {
+    requests.forEach(req => {
+      const donation = req.donationId;
+      if (!donation) return;
+
+      const donTitle = donation.title || 'Unknown Donation';
+      const donorName = donation.donorId?.name || 'a Donor';
+
+      activities.push({
+        id: `req-sent-${req._id}`,
+        timestamp: new Date(req.createdAt),
+        title: 'Donation Requested',
+        description: `Requested food donation "${donTitle}"`,
+        type: 'request'
+      });
+
+      if (req.status === 'Accepted') {
+        activities.push({
+          id: `req-accept-${req._id}`,
+          timestamp: new Date(req.updatedAt),
+          title: 'Request Accepted',
+          description: `Request for "${donTitle}" accepted by "${donorName}"`,
+          type: 'accept'
+        });
+      } else if (req.status === 'PickedUp') {
+        activities.push({
+          id: `req-pickup-${req._id}`,
+          timestamp: new Date(req.updatedAt),
+          title: 'Food Picked Up',
+          description: `Marked "${donTitle}" as Picked Up`,
+          type: 'pickup'
+        });
+      } else if (req.status === 'Completed') {
+        activities.push({
+          id: `req-complete-${req._id}`,
+          timestamp: new Date(req.updatedAt),
+          title: 'Donation Completed',
+          description: `Completed pickup & rescue of "${donTitle}"`,
+          type: 'complete'
+        });
+      } else if (req.status === 'Rejected') {
+        activities.push({
+          id: `req-reject-${req._id}`,
+          timestamp: new Date(req.updatedAt),
+          title: 'Request Rejected',
+          description: `Request for "${donTitle}" was rejected`,
+          type: 'reject'
+        });
+      }
+    });
+  }
+
+  return activities.sort((a, b) => b.timestamp - a.timestamp);
+};
+
+const RecentActivityFeed = ({ role, donations, requests }) => {
+  const activities = getRecentActivity(role, donations, requests).slice(0, 5);
+
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
+      <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <Clock size={18} className="text-emerald-600" /> Recent Activity
+      </h2>
+      
+      {activities.length === 0 ? (
+        <div className="flex-grow flex flex-col items-center justify-center text-center py-8">
+          <Clock size={36} className="text-gray-200 mb-2" />
+          <p className="text-gray-400 text-xs font-semibold">No recent activity logs</p>
+        </div>
+      ) : (
+        <div className="flex-grow relative border-l-2 border-emerald-50 ml-3 space-y-5 pb-2">
+          {activities.map((act) => {
+            let IconComponent = Clock;
+            let iconColor = 'text-gray-500 bg-gray-50';
+            
+            if (act.type === 'create') {
+              IconComponent = Package;
+              iconColor = 'text-blue-600 bg-blue-50';
+            } else if (act.type === 'request') {
+              IconComponent = Users;
+              iconColor = 'text-amber-600 bg-amber-50';
+            } else if (act.type === 'accept') {
+              IconComponent = CheckCircle;
+              iconColor = 'text-emerald-600 bg-emerald-50';
+            } else if (act.type === 'pickup') {
+              IconComponent = ArrowRight;
+              iconColor = 'text-purple-600 bg-purple-50';
+            } else if (act.type === 'complete') {
+              IconComponent = CheckCircle;
+              iconColor = 'text-teal-600 bg-teal-50';
+            } else if (act.type === 'expire') {
+              IconComponent = AlertTriangle;
+              iconColor = 'text-red-500 bg-red-50';
+            } else if (act.type === 'reject') {
+              IconComponent = AlertCircle;
+              iconColor = 'text-red-500 bg-red-50';
+            }
+
+            return (
+              <div key={act.id} className="relative pl-7 group">
+                <div className={`absolute -left-[13px] top-0.5 rounded-full p-1 border border-white shadow-sm transition-transform group-hover:scale-115 ${iconColor}`}>
+                  <IconComponent size={10} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-gray-800">{act.title}</h4>
+                  <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{act.description}</p>
+                  <span className="text-[9px] text-gray-400 font-semibold block mt-1">
+                    {getTimeAgo(act.timestamp)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 };
 
