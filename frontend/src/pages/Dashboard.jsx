@@ -112,6 +112,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 // ─────────────────────────────────────────────
 // Stat Card component
 // ─────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 const StatCard = ({ label, value, icon: Icon, color, subText }) => (
   <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition group overflow-hidden relative flex flex-col justify-between min-h-[110px]">
     <div className={`absolute top-0 right-0 w-16 h-16 opacity-5 transform translate-x-4 -translate-y-4 ${color}`}>

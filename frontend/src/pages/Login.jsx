@@ -69,6 +69,7 @@ const Login = () => {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (err) {
+      console.error('[Login] Google auth error:', err);
       toast.error('Google login failed.');
     } finally {
       toast.dismiss(loginToast);

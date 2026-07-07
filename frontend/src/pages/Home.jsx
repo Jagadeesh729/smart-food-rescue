@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Globe, Utensils, Users, Package, CheckCircle, ArrowRight, Leaf, Clock } from 'lucide-react';
@@ -17,7 +18,7 @@ const useCountUp = (target, duration = 1500, started = false) => {
       else setCount(start);
     }, 16);
     return () => clearInterval(timer);
-  }, [target, started]);
+  }, [target, started, duration]);
   return count;
 };
 

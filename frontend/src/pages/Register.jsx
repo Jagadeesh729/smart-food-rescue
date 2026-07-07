@@ -51,6 +51,7 @@ const Register = () => {
           const res = await checkEmail(value);
           setEmailStatus(res.exists ? 'taken' : 'available');
         } catch (err) {
+          console.error('[Register] Email check failed:', err);
           setEmailStatus('idle');
         }
       }, 250);
@@ -64,6 +65,7 @@ const Register = () => {
       toast.success('Account created and verified!');
       navigate('/dashboard');
     } catch (err) {
+      console.error('[Register] Google Auth failed:', err);
       toast.error('Google registration failed.');
     } finally {
       toast.dismiss(loginToast);

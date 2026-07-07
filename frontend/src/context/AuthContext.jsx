@@ -1,24 +1,22 @@
-import React, { createContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useState } from 'react';
 import api from '../services/api';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
     if (stored) {
       try {
-        setUser(JSON.parse(stored));
+        return JSON.parse(stored);
       } catch (error) {
         console.error('Failed to parse stored user data:', error);
         localStorage.removeItem('user');
       }
     }
-    setLoading(false);
-  }, []);
+    return null;
+  });
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
@@ -82,9 +80,9 @@ export const AuthProvider = ({ children }) => {
       googleLogin,
       updateProfile,
       logout,
-      loading
+      loading: false
     }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

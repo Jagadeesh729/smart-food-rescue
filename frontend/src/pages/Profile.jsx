@@ -59,6 +59,7 @@ const Profile = () => {
       }
     };
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!user) return null;
@@ -326,7 +327,7 @@ const Profile = () => {
               </button>
             </div>
             <div className="max-w-md space-y-4">
-              {['currentPassword', 'newPassword', 'confirmPassword'].map((field, i) => (
+              {['currentPassword', 'newPassword', 'confirmPassword'].map((field) => (
                 <div key={field}>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
                     {field === 'currentPassword' ? 'Current Password' : field === 'newPassword' ? 'New Password' : 'Confirm New Password'}

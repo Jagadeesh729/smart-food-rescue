@@ -75,6 +75,7 @@ const AddDonation = () => {
         setError('Address not found. Please try a different query or use GPS.');
       }
     } catch (err) {
+      console.error('[AddDonation] Geocode error:', err);
       setError('Failed to fetch address coordinates.');
     } finally {
       setSearchingLocation(false);

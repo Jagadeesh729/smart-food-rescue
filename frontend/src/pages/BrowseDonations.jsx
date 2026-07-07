@@ -63,7 +63,7 @@ const BrowseDonations = () => {
   useEffect(() => {
     if (!socket) return;
 
-    const handleNewDonation = (donation) => {
+    const handleNewDonation = () => {
       // Don't auto-insert without location check — just show a refresh prompt
       setNewBadge(true);
       toast('A new donation is available nearby!', {
