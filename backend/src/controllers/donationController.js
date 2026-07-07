@@ -8,6 +8,10 @@ const { broadcastNewDonation } = require('../sockets/socketHandler');
 // @access  Private (Donor only)
 const createDonation = async (req, res) => {
   try {
+    if (req.user.role !== 'Donor') {
+      return res.status(403).json({ message: 'Only Donors are authorized to create food donations' });
+    }
+    
     const { title, description, foodType, quantity, unit, expiryTime, location } = req.body;
     let imageUrl = '';
 

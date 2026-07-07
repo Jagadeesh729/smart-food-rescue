@@ -7,6 +7,10 @@ const { getIo } = require('../sockets/socketHandler');
 // @access  Private (NGO only)
 const createRequest = async (req, res) => {
   try {
+    if (req.user.role !== 'NGO') {
+      return res.status(403).json({ message: 'Only NGOs are authorized to request food donations' });
+    }
+    
     const { donationId, message } = req.body;
 
     const donation = await Donation.findById(donationId);
